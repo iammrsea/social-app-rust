@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+    "internal/content",
+    "internal/services",
+    "internal/shared",
+    "internal/user",
+    "server",
+]
