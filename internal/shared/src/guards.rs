@@ -3,7 +3,7 @@ pub mod abac;
 /// Provides implementation for role-based access control
 pub mod rbac;
 
-pub trait Guards {}
+pub trait Guards: rbac::RbacGuard + abac::AbacGuard + Send + Sync {}
 
 pub struct GuardsImpl;
 

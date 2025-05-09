@@ -1,27 +1,16 @@
-use crate::{
-    auth::AuthenticatedUser,
-    types::{AppResult, non_empty_string::NonEmptyString},
-};
+use crate::{auth::AuthenticatedUser, types::AppResult};
 
 use super::Guards;
 
 pub trait AbacGuard {
-    fn can_change_username(
-        &self,
-        _user_id: &NonEmptyString,
-        auth_user: &AuthenticatedUser,
-    ) -> AppResult<()>;
+    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()>;
 }
 
 impl<T> AbacGuard for T
 where
     T: Guards,
 {
-    fn can_change_username(
-        &self,
-        user_id: &NonEmptyString,
-        auth_user: &AuthenticatedUser,
-    ) -> AppResult<()> {
+    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()> {
         user::can_change_username(user_id, auth_user)
     }
 }

@@ -1,5 +1,6 @@
 use crate::errors::{content::ContentDomainError, user::UserDomainError};
 use std::fmt;
+use tracing::error;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -36,8 +37,9 @@ impl From<ContentDomainError> for AppError {
     }
 }
 
-// impl From<mongodb::error::Error> for AppError {
-//     fn from(err: mongodb::error::Error) -> Self {
-//         Self::Database(err.to_string())
-//     }
-// }
+impl From<mongodb::error::Error> for AppError {
+    fn from(err: mongodb::error::Error) -> Self {
+        error!("Mongodb Error: {:#?}", err);
+        Self::Database(err.to_string())
+    }
+}

@@ -14,10 +14,10 @@ pub struct Ban {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserReadModel {
+    pub id: String,
     pub username: String,
     pub email: String,
     pub role: UserRole,
-    pub id: String,
     pub badges: Vec<String>,
     pub created_at: Date,
     pub updated_at: Date,

@@ -22,7 +22,7 @@ pub struct GetUsersResult {
 }
 
 #[async_trait]
-pub trait UserReadModelRepository {
+pub trait UserReadModelRepository: Send + Sync {
     async fn get_users(&self, opts: &GetUsersOptions) -> AppResult<GetUsersResult>;
     async fn get_user_by_id(&self, id: &str) -> AppResult<Option<UserReadModel>>;
     async fn get_user_by_email(&self, email: &str) -> AppResult<Option<UserReadModel>>;

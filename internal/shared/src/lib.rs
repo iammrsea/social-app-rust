@@ -1,7 +1,9 @@
 pub mod auth;
+pub mod command_handler;
 pub mod config;
 pub mod errors;
 pub mod guards;
 pub mod pagination;
+pub mod query_handler;
 pub mod storage;
 pub mod types;

@@ -6,6 +6,7 @@ pub enum UserDomainError {
     UsernameTaken,
     InvalidEmail,
     Unauthorized,
+    UsernameOrEmailTaken,
 }
 
 impl fmt::Display for UserDomainError {
@@ -15,6 +16,7 @@ impl fmt::Display for UserDomainError {
             Self::UsernameTaken => write!(f, "Username already taken"),
             Self::InvalidEmail => write!(f, "Email is invalid"),
             Self::Unauthorized => write!(f, "Unauthorized access"),
+            Self::UsernameOrEmailTaken => write!(f, "Username or email already taken"),
         }
     }
 }

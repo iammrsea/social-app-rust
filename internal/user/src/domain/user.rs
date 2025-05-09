@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use shared::guards::rbac::roles::UserRole;
 use shared::types::non_empty_string::NonEmptyString;
@@ -31,11 +32,11 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(id: String, email: String, username: String, role: UserRole) -> Self {
+    pub fn new(email: NonEmptyString, username: NonEmptyString, role: UserRole) -> Self {
         Self {
-            id,
-            email,
-            username,
+            id: Uuid::new_v4().to_string(),
+            email: email.into(),
+            username: username.into(),
             role,
             joined_at: Utc::now(),
             ban_status: None,
@@ -137,18 +138,13 @@ impl Ban {
 
 #[cfg(test)]
 mod tests {
+    use super::UserRole::{Moderator, Regular};
     use super::*;
     use shared::types::Duration;
-    use uuid::Uuid;
 
     #[test]
     fn ban_user_definitely() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let reason = NonEmptyString::new("abuse".into()).unwrap();
         let ban_type = BanType::Definite {
             from: Utc::now(),
@@ -168,12 +164,7 @@ mod tests {
 
     #[test]
     fn ban_user_indefinitely() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let reason = NonEmptyString::new("abuse".into()).unwrap();
         let ban_type = BanType::Indefinite;
         user.ban(reason, ban_type.clone());
@@ -190,12 +181,7 @@ mod tests {
 
     #[test]
     fn unban_user() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let reason = NonEmptyString::new("abuse".into()).unwrap();
         let ban_type = BanType::Indefinite;
         user.ban(reason, ban_type);
@@ -212,12 +198,7 @@ mod tests {
 
     #[test]
     fn change_username() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let new_username = NonEmptyString::new("johndoe123".into()).unwrap();
         user.change_username(new_username.clone());
         assert_eq!(
@@ -231,12 +212,7 @@ mod tests {
 
     #[test]
     fn award_badge() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let badge = NonEmptyString::new("5-star".into()).unwrap();
         user.award_badge(badge);
         assert_eq!(
@@ -250,12 +226,7 @@ mod tests {
 
     #[test]
     fn revoke_badge() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         let badge = NonEmptyString::new("5-star".into()).unwrap();
         user.award_badge(badge.clone());
         user.revoke_badge(badge);
@@ -270,12 +241,7 @@ mod tests {
 
     #[test]
     fn make_moderator() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(None);
         user.make_moderator();
         assert_eq!(
             &UserRole::Moderator,
@@ -288,12 +254,7 @@ mod tests {
 
     #[test]
     fn make_regular() {
-        let mut user = User::new(
-            Uuid::new_v4().into(),
-            "johndoe@gmail.com".into(),
-            "johndoe".into(),
-            UserRole::Regular,
-        );
+        let mut user = create_user(Some(Moderator));
         user.make_regular();
         assert_eq!(
             &UserRole::Regular,
@@ -302,5 +263,12 @@ mod tests {
             UserRole::Regular,
             user.role()
         )
+    }
+
+    fn create_user(role: Option<UserRole>) -> User {
+        let role = role.unwrap_or(Regular);
+        let email = NonEmptyString::new("johndoe@gmail.com".into()).unwrap();
+        let username = NonEmptyString::new("johndoe".into()).unwrap();
+        User::new(email, username, role)
     }
 }
