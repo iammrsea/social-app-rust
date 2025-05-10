@@ -1367,12 +1367,19 @@ dependencies = [
 [[package]]
 name = "server"
 version = "0.1.0"
+dependencies = [
+ "services",
+]
 
 [[package]]
 name = "services"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "mongodb",
+ "shared",
+ "tokio",
+ "tracing",
  "user",
 ]
 
@@ -1406,6 +1413,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "mongodb",
+ "once_cell",
  "serde",
  "tracing",
 ]
@@ -1619,6 +1627,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",

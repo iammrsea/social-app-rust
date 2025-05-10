@@ -1,50 +1,28 @@
+use shared::guards::GuardsImpl;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use user::domain::{
-    user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
-};
+use user::app::user_service::UserService;
 
-enum StorageEngine {
-    MongoDB,
-    Memory,
-    PostgreSQL,
-    SQLite,
+use storage::{AppStorage, StorageEngine};
+
+mod storage;
+
+pub struct Services {
+    pub user_service: UserService,
+}
+pub struct AppService {
+    pub services: Services,
 }
 
-struct AppStorage {}
-
-impl AppStorage {
-    fn build(engine: StorageEngine) -> impl StorageSources {
-        match engine {
-            StorageEngine::MongoDB => MongoDBStorage::new(),
-            _ => unimplemented!(),
-        }
+impl AppService {
+    pub async fn build(engine: StorageEngine) -> Self {
+        let storage = AppStorage::build(engine).await;
+        let repos = storage.repos();
+        let guard = Arc::new(GuardsImpl);
+        let services = Services {
+            user_service: UserService::new(repos.user_repo, repos.user_read_repo, guard),
+            // Add more services for other app domains here
+        };
+        Self { services }
     }
-}
-
-struct Repos {
-    user_repo: Arc<dyn UserRepository>,
-    user_read_repo: Arc<dyn UserReadModelRepository>,
-}
-
-#[async_trait]
-pub trait StorageSources: Send + Sync {
-    fn repos(&self) -> ();
-    // fn repos(&self) -> Repos;
-    async fn close_storage(&self);
-}
-
-pub struct MongoDBStorage;
-
-impl MongoDBStorage {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-#[async_trait]
-impl StorageSources for MongoDBStorage {
-    fn repos(&self) -> () {}
-    async fn close_storage(&self) {}
 }

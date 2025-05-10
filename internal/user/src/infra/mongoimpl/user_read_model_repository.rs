@@ -14,7 +14,7 @@ pub struct MongoUserReadModelRepository {
 }
 
 impl MongoUserReadModelRepository {
-    fn new(db: Database) -> Self {
+    pub fn new(db: Database) -> Self {
         Self {
             collection: db.collection("users"),
         }

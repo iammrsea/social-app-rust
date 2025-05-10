@@ -14,7 +14,7 @@ pub struct MongoUserRepository {
 }
 
 impl MongoUserRepository {
-    fn new(db: Database) -> Self {
+    pub fn new(db: Database) -> Self {
         Self {
             collection: db.collection("users"),
         }
