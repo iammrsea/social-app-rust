@@ -42,7 +42,6 @@ impl CommandHanlder<BanUser> for BanUserHandler {
                 &cmd.user_id,
                 Box::new(|user| {
                     user.ban(cmd.reason, cmd.ban_type);
-                    Ok(())
                 }),
             )
             .await?;

@@ -41,7 +41,6 @@ impl CommandHanlder<RevokeBadge> for RevokeBadgeHandler {
                 &cmd.user_id,
                 Box::new(|user| {
                     user.award_badge(cmd.badge);
-                    Ok(())
                 }),
             )
             .await?;

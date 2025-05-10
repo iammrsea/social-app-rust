@@ -40,7 +40,6 @@ impl CommandHanlder<UnbanUser> for UnbanUserHandler {
                 &cmd.user_id,
                 Box::new(|user| {
                     user.unban();
-                    Ok(())
                 }),
             )
             .await?;

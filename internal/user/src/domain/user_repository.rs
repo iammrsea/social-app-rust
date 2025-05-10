@@ -4,7 +4,7 @@ use shared::types::AppResult;
 
 use super::user::User;
 
-pub type F = Box<dyn FnOnce(&mut User) -> AppResult<()> + Send>;
+pub type F = Box<dyn FnOnce(&mut User) + Send>;
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {

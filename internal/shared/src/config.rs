@@ -1,13 +1,11 @@
 use std::env::var;
 use std::fmt::Debug;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use dotenvy::dotenv;
 use once_cell::sync::OnceCell;
 
-pub mod env;
-pub mod storage;
+use utils::{get_env_bool, get_env_num};
 
 const AUTH_SECRET: &str = "AUTH_SECRET";
 const RUST_ENV: &str = "RUST_ENV";
@@ -36,7 +34,7 @@ pub struct MongoDbConfig {
     pub timeout_secs: u64,
     pub retry_reads: bool,
     pub retry_writes: bool,
-    pub replica_set: String,
+    pub replica_set: Option<String>,
 }
 #[derive(Debug)]
 pub struct PostgresConfig {
@@ -91,7 +89,7 @@ impl Config {
         ENV_LOADER.get_or_init(|| dotenv().ok());
 
         let auth_secret = var(AUTH_SECRET).expect(format!("{} is not set", AUTH_SECRET).as_str());
-        println!("auth screte: {}", auth_secret);
+
         let rust_environment = var(RUST_ENV)
             .expect(
                 format!(
@@ -117,6 +115,9 @@ impl Config {
 
         let timeout_secs: u64 = get_env_num(TIMEOUT, "30");
 
+        let replica_set =
+            var(MONGODB_REPLICA_SET).map_or(None, |v| if v.len() == 0 { None } else { Some(v) });
+
         MongoDbConfig {
             uri: var(MONGODB_URI).expect(format!("{} is not set", MONGODB_URI).as_str()),
             database_name: var(MONGODB_NAME)
@@ -127,7 +128,7 @@ impl Config {
             timeout_secs,
             retry_reads: get_env_bool(MONGODB_RETRY_READS, "true"),
             retry_writes: get_env_bool(MONGODB_RETRY_WRITES, "true"),
-            replica_set: var(MONGODB_REPLICA_SET).unwrap_or("rs0".into()),
+            replica_set,
         }
     }
     pub fn build_postgres_config(&self) -> PostgresConfig {
@@ -148,37 +149,43 @@ impl Config {
     }
 }
 
-trait IsAllowedNum {}
+mod utils {
+    use std::env::var;
+    use std::fmt::Debug;
+    use std::str::FromStr;
 
-impl IsAllowedNum for u32 {}
-impl IsAllowedNum for u64 {}
+    pub trait IsAllowedNum {}
 
-fn get_env_num<T>(name: &str, fallback: &str) -> T
-where
-    T: IsAllowedNum + FromStr,
-    <T as FromStr>::Err: Debug,
-{
-    let fallback: String = fallback.into();
-    let value = var(name).map_or(
-        fallback.clone(),
-        |v| if v.len() == 0 { fallback } else { v },
-    );
-    let value: T = value
-        .parse()
-        .expect(format!("{} must be a number", name).as_str());
-    value
-}
+    impl IsAllowedNum for u32 {}
+    impl IsAllowedNum for u64 {}
 
-fn get_env_bool(name: &str, fallback: &str) -> bool {
-    let fallback: String = fallback.into();
-    let value = var(name).map_or(
-        fallback.clone(),
-        |v| if v.len() == 0 { fallback } else { v },
-    );
-    let value: bool = value
-        .parse()
-        .expect(format!("{} must be a bool", name).as_str());
-    value
+    pub fn get_env_num<T>(name: &str, fallback: &str) -> T
+    where
+        T: IsAllowedNum + FromStr,
+        <T as FromStr>::Err: Debug,
+    {
+        let fallback: String = fallback.into();
+        let value = var(name).map_or(
+            fallback.clone(),
+            |v| if v.len() == 0 { fallback } else { v },
+        );
+        let value: T = value
+            .parse()
+            .expect(format!("{} must be a number", name).as_str());
+        value
+    }
+
+    pub fn get_env_bool(name: &str, fallback: &str) -> bool {
+        let fallback: String = fallback.into();
+        let value = var(name).map_or(
+            fallback.clone(),
+            |v| if v.len() == 0 { fallback } else { v },
+        );
+        let value: bool = value
+            .parse()
+            .expect(format!("{} must be a bool", name).as_str());
+        value
+    }
 }
 
 #[cfg(test)]

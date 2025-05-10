@@ -40,7 +40,6 @@ impl CommandHanlder<MakeModerator> for MakeModeratorHandler {
                 &cmd.user_id,
                 Box::new(|user| {
                     user.make_moderator();
-                    Ok(())
                 }),
             )
             .await?;

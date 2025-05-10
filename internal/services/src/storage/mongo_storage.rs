@@ -54,7 +54,9 @@ async fn connect(cf: &MongoDbConfig) -> AppResult<Client> {
     options.max_idle_time = Some(Duration::from_secs(cf.conn_idle_time_secs));
     options.retry_reads = Some(cf.retry_reads);
     options.retry_writes = Some(cf.retry_writes);
-    options.repl_set_name = Some(cf.replica_set.clone());
+    if let Some(rs) = &cf.replica_set {
+        options.repl_set_name = Some(rs.clone());
+    }
 
     let client = Client::with_options(options)?;
     let ping_result = timeout(

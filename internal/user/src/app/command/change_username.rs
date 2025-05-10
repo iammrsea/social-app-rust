@@ -45,7 +45,6 @@ impl CommandHanlder<ChangeUsername> for ChangeUsernameHandler {
                 &cmd.user_id,
                 Box::new(|user| {
                     user.change_username(cmd.username);
-                    Ok(())
                 }),
             )
             .await?;
