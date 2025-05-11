@@ -11,7 +11,7 @@ pub enum BanType {
     Indefinite,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Ban {
     is_banned: bool,
     reason: String,
@@ -19,7 +19,7 @@ pub struct Ban {
     ban_type: BanType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct User {
     id: String,
     email: String,
@@ -82,6 +82,24 @@ impl User {
     pub fn make_regular(&mut self) {
         self.role = UserRole::Regular
     }
+    pub fn new_test_user(role: Option<UserRole>) -> User {
+        let role = role.unwrap_or(UserRole::Regular);
+        let email = NonEmptyString::new("johndoe@gmail.com".into()).unwrap();
+        let username = NonEmptyString::new("johndoe".into()).unwrap();
+        User {
+            id: User::test_user_id(),
+            email: email.into(),
+            username: username.into(),
+            role,
+            joined_at: Utc::now(),
+            ban_status: None,
+            updated_at: Utc::now(),
+            badges: vec![],
+        }
+    }
+    pub fn test_user_id() -> String {
+        "user-id123".into()
+    }
 }
 
 /// Implement getters;
@@ -118,12 +136,6 @@ impl User {
     }
     pub fn is_admin(&self) -> bool {
         self.role == UserRole::Admin
-    }
-    pub fn new_test_user(role: Option<UserRole>) -> User {
-        let role = role.unwrap_or(UserRole::Regular);
-        let email = NonEmptyString::new("johndoe@gmail.com".into()).unwrap();
-        let username = NonEmptyString::new("johndoe".into()).unwrap();
-        User::new(email, username, role)
     }
 }
 

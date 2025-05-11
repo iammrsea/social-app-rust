@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "internal/content",
+    "internal/content", "internal/infra",
     "internal/services",
     "internal/shared",
     "internal/user",
