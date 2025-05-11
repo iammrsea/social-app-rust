@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use shared::guards::Guards;
+use crate::guards::UserGuards;
 
 use crate::domain::{
     user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
@@ -27,7 +27,7 @@ impl UserService {
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         user_read_repo: Arc<dyn UserReadModelRepository>,
-        guard: Arc<dyn Guards>,
+        guard: Arc<dyn UserGuards>,
     ) -> Self {
         Self {
             command_handler: CommandHandler {

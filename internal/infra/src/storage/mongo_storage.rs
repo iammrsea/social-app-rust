@@ -3,10 +3,8 @@ use std::time::Duration;
 use tokio::time::timeout;
 use tracing::info;
 
-use shared::{
-    config::{Config, MongoDbConfig},
-    types::AppResult,
-};
+use crate::config::{Config, MongoDbConfig};
+use shared::types::AppResult;
 use std::sync::Arc;
 
 use user::infra::mongoimpl::{

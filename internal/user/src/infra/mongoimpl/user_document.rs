@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::domain::user::BanType;
-use shared::guards::rbac::roles::UserRole;
+use shared::guards::roles::UserRole;
 use shared::types::Date;
 
 #[derive(Debug, Serialize, Deserialize)]

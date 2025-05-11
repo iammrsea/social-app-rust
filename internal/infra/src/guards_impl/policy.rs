@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use super::permissions::Permission;
-use super::permissions::Permission::{BanUser, CreateAccount, ListUsers, UnbanUser, ViewUser};
-use super::roles::UserRole;
-use super::roles::UserRole::{Admin, Guest, Moderator, Regular};
+use shared::guards::permissions::Permission;
+use shared::guards::permissions::Permission::{
+    BanUser, CreateAccount, ListUsers, UnbanUser, ViewUser,
+};
+use shared::guards::roles::UserRole;
+use shared::guards::roles::UserRole::{Admin, Guest, Moderator, Regular};
 
 #[derive(Debug, Clone)]
 pub struct Policy {

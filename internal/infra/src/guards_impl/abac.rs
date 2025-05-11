@@ -1,25 +1,25 @@
-use crate::{auth::AuthenticatedUser, types::AppResult};
+use shared::{auth::AuthenticatedUser, types::AppResult};
 
-use super::Guards;
+pub struct AbacEngine;
 
-pub trait AbacGuard {
-    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()>;
-}
-
-impl<T> AbacGuard for T
-where
-    T: Guards,
-{
-    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()> {
+impl AbacEngine {
+    pub fn new() -> Self {
+        Self
+    }
+    pub fn can_change_username(
+        &self,
+        user_id: &str,
+        auth_user: &AuthenticatedUser,
+    ) -> AppResult<()> {
         user::can_change_username(user_id, auth_user)
     }
 }
 
 pub mod user {
-    use crate::auth::AuthenticatedUser;
-    use crate::errors::user::UserDomainError;
-    use crate::guards::rbac::roles::UserRole::{Admin, Guest, Moderator, Regular};
-    use crate::types::AppResult;
+    use shared::auth::AuthenticatedUser;
+    use shared::errors::user::UserDomainError;
+    use shared::guards::roles::UserRole::{Admin, Guest, Moderator, Regular};
+    use shared::types::AppResult;
 
     pub fn can_change_username(user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()> {
         match auth_user.role {

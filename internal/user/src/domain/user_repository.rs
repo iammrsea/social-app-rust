@@ -6,6 +6,7 @@ use super::user::User;
 
 pub type F = Box<dyn FnOnce(&mut User) + Send>;
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn create_account(&self, user: User) -> AppResult<()>;

@@ -10,7 +10,7 @@ use crate::domain::{
 use super::user_document::UserDocument;
 
 pub struct MongoUserReadModelRepository {
-    collection: Collection<UserDocument>,
+    pub collection: Collection<UserDocument>, // TODO: remove pub from collection field
 }
 
 impl MongoUserReadModelRepository {
@@ -23,13 +23,13 @@ impl MongoUserReadModelRepository {
 
 #[async_trait]
 impl UserReadModelRepository for MongoUserReadModelRepository {
-    async fn get_users(&self, opts: &GetUsersOptions) -> AppResult<GetUsersResult> {
+    async fn get_users(&self, _opts: &GetUsersOptions) -> AppResult<GetUsersResult> {
         unimplemented!()
     }
-    async fn get_user_by_id(&self, id: &str) -> AppResult<Option<UserReadModel>> {
+    async fn get_user_by_id(&self, _id: &str) -> AppResult<Option<UserReadModel>> {
         unimplemented!()
     }
-    async fn get_user_by_email(&self, email: &str) -> AppResult<Option<UserReadModel>> {
+    async fn get_user_by_email(&self, _email: &str) -> AppResult<Option<UserReadModel>> {
         unimplemented!()
     }
 }

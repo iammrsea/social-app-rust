@@ -6,11 +6,12 @@ use shared::{
     auth::AuthenticatedUser,
     command_handler::CommandHanlder,
     errors::user::UserDomainError,
-    guards::{Guards, rbac::roles::UserRole},
+    guards::roles::UserRole,
     types::{AppResult, non_empty_string::NonEmptyString},
 };
 
 use crate::domain::user_repository::UserRepository;
+use crate::guards::UserGuards;
 
 pub struct ChangeUsername {
     pub user_id: String,
@@ -19,11 +20,11 @@ pub struct ChangeUsername {
 
 pub struct ChangeUsernameHandler {
     repo: Arc<dyn UserRepository>,
-    guard: Arc<dyn Guards>,
+    guard: Arc<dyn UserGuards>,
 }
 
 impl ChangeUsernameHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn Guards>) -> Self {
+    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
         Self { repo, guard }
     }
 }

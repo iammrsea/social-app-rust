@@ -5,14 +5,12 @@ use async_trait::async_trait;
 use shared::{
     auth::AuthenticatedUser,
     command_handler::CommandHanlder,
-    guards::{
-        Guards,
-        rbac::{permissions::Permission, roles::UserRole},
-    },
+    guards::{permissions::UserPermission, roles::UserRole},
     types::AppResult,
 };
 
 use crate::domain::user_repository::UserRepository;
+use crate::guards::UserGuards;
 
 pub struct MakeModerator {
     pub user_id: String,
@@ -20,11 +18,11 @@ pub struct MakeModerator {
 
 pub struct MakeModeratorHandler {
     repo: Arc<dyn UserRepository>,
-    guard: Arc<dyn Guards>,
+    guard: Arc<dyn UserGuards>,
 }
 
 impl MakeModeratorHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn Guards>) -> Self {
+    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
         Self { repo, guard }
     }
 }
@@ -34,7 +32,7 @@ impl CommandHanlder<MakeModerator> for MakeModeratorHandler {
     async fn handle(&self, cmd: MakeModerator) -> AppResult<()> {
         let auth_user = AuthenticatedUser::new(UserRole::Admin); // TODO: Get auth user from context
         self.guard
-            .authorize(&auth_user.role, &Permission::MakeModerator)?;
+            .authorize(&auth_user.role, &UserPermission::MakeModerator)?;
         self.repo
             .make_moderator(
                 &cmd.user_id,

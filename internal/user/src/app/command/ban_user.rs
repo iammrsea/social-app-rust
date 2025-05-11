@@ -5,14 +5,12 @@ use async_trait::async_trait;
 use shared::{
     auth::AuthenticatedUser,
     command_handler::CommandHanlder,
-    guards::{
-        Guards,
-        rbac::{permissions::Permission, roles::UserRole},
-    },
+    guards::{permissions::UserPermission, roles::UserRole},
     types::{AppResult, non_empty_string::NonEmptyString},
 };
 
 use crate::domain::{user::BanType, user_repository::UserRepository};
+use crate::guards::UserGuards;
 
 pub struct BanUser {
     pub user_id: String,
@@ -22,11 +20,11 @@ pub struct BanUser {
 
 pub struct BanUserHandler {
     repo: Arc<dyn UserRepository>,
-    guard: Arc<dyn Guards>,
+    guard: Arc<dyn UserGuards>,
 }
 
 impl BanUserHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn Guards>) -> Self {
+    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
         Self { repo, guard }
     }
 }
@@ -36,7 +34,7 @@ impl CommandHanlder<BanUser> for BanUserHandler {
     async fn handle(&self, cmd: BanUser) -> AppResult<()> {
         let auth_user = AuthenticatedUser::new(UserRole::Admin); // TODO: Get auth user from context
         self.guard
-            .authorize(&auth_user.role, &Permission::BanUser)?;
+            .authorize(&auth_user.role, &UserPermission::BanUser)?;
         self.repo
             .ban_user(
                 &cmd.user_id,

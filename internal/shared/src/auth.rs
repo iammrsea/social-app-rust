@@ -1,4 +1,4 @@
-use crate::guards::rbac::roles::UserRole;
+use crate::guards::roles::UserRole;
 
 pub struct AuthenticatedUser {
     pub email: String,
