@@ -3,13 +3,13 @@ use shared::types::AppResult;
 
 use super::user_read_model::UserReadModel;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GetUsersOptions {
     pub first: u32,
     pub after: String,
     pub sort_direction: SortDirection,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SortDirection {
     ASC,
     DESC,
@@ -21,6 +21,7 @@ pub struct GetUsersResult {
     pub has_next: bool,
 }
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait UserReadModelRepository: Send + Sync {
     async fn get_users(&self, opts: &GetUsersOptions) -> AppResult<GetUsersResult>;
