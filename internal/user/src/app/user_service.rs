@@ -8,9 +8,9 @@ use crate::domain::{
 
 use super::{
     command::{
-        award_badge::RevokeBadgeHandler, ban_user::BanUserHandler,
+        award_badge::AwardBadgeHandler, ban_user::BanUserHandler,
         change_username::ChangeUsernameHandler, create_account::CreateAccountHandler,
-        make_moderator::MakeModeratorHandler, revoke_badge::AwardBadgeHandler,
+        make_moderator::MakeModeratorHandler, revoke_badge::RevokeBadgeHandler,
         unban_user::UnbanUserHandler,
     },
     query::{

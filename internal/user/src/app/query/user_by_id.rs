@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use shared::{
-    auth::AuthenticatedUser,
+    auth::{AppContext, get_auth_user_from_ctx},
     errors::user::UserDomainError,
-    guards::{permissions::UserPermission, roles::UserRole},
+    guards::permissions::UserPermission,
     query_handler::QueryHandler,
     types::AppResult,
 };
@@ -30,8 +30,8 @@ impl GetUserByIdHander {
 
 #[async_trait]
 impl QueryHandler<GetUserById, UserReadModel> for GetUserByIdHander {
-    async fn handle(&self, cmd: GetUserById) -> AppResult<UserReadModel> {
-        let auth_user = AuthenticatedUser::new(UserRole::Admin); // TODO: Get auth user from context
+    async fn handle(&self, ctx: AppContext, cmd: GetUserById) -> AppResult<UserReadModel> {
+        let auth_user = get_auth_user_from_ctx(ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ViewUser)?;
         let user = self.repo.get_user_by_id(&cmd.id).await?;

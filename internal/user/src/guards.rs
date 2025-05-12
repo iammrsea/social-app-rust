@@ -1,5 +1,5 @@
 use shared::{
-    auth::AuthenticatedUser,
+    auth::AuthUser,
     guards::{permissions::UserPermission, roles::UserRole},
     types::AppResult,
 };
@@ -7,5 +7,5 @@ use shared::{
 #[cfg_attr(test, mockall::automock)]
 pub trait UserGuards: Send + Sync {
     fn authorize(&self, role: &UserRole, perm: &UserPermission) -> AppResult<()>;
-    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()>;
+    fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> AppResult<()>;
 }

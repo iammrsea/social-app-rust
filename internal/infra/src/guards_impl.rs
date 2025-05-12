@@ -1,7 +1,7 @@
 use abac::AbacEngine;
 use rbac::RbacEngine;
 use shared::{
-    auth::AuthenticatedUser,
+    auth::AuthUser,
     guards::{
         permissions::{Permission, UserPermission},
         roles::UserRole,
@@ -28,7 +28,7 @@ impl GuardsImpl {
 }
 
 impl user::guards::UserGuards for GuardsImpl {
-    fn can_change_username(&self, user_id: &str, auth_user: &AuthenticatedUser) -> AppResult<()> {
+    fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> AppResult<()> {
         self.abac.can_change_username(user_id, auth_user)
     }
     fn authorize(&self, role: &UserRole, perm: &UserPermission) -> AppResult<()> {

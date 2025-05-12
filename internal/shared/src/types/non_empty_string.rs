@@ -4,7 +4,7 @@ use crate::errors::app::AppError;
 
 use super::AppResult;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NonEmptyString {
     value: String,
 }

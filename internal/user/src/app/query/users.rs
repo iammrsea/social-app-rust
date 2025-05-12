@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use shared::{
-    auth::AuthenticatedUser,
-    guards::{permissions::UserPermission, roles::UserRole},
+    auth::{AppContext, get_auth_user_from_ctx},
+    guards::permissions::UserPermission,
     pagination::{PaginatedQueryResult, PaginationInfo},
     query_handler::QueryHandler,
     types::AppResult,
@@ -30,8 +30,8 @@ impl GetUsersHandler {
 
 #[async_trait]
 impl QueryHandler<GetUsersOptions, Result> for GetUsersHandler {
-    async fn handle(&self, cmd: GetUsersOptions) -> AppResult<Result> {
-        let auth_user = AuthenticatedUser::new(UserRole::Admin); // TODO: Get auth user from context
+    async fn handle(&self, ctx: AppContext, cmd: GetUsersOptions) -> AppResult<Result> {
+        let auth_user = get_auth_user_from_ctx(ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ListUsers)?;
         let resp = self.repo.get_users(&cmd).await?;
