@@ -1,10 +1,15 @@
 use serde::{Deserialize, Serialize};
 
-use super::user::BanType;
 use shared::guards::roles::UserRole;
 use shared::types::{Date, Utc};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum BanType {
+    Definite { from: Date, to: Date },
+    Indefinite,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Ban {
     pub is_banned: bool,
     pub reason: String,
@@ -12,7 +17,7 @@ pub struct Ban {
     pub ban_type: BanType,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserReadModel {
     pub id: String,
     pub username: String,

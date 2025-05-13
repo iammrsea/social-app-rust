@@ -65,7 +65,7 @@ mod tests {
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = GetUsersOptions {
-            after: "iie393939393".into(),
+            after: Some("iie393939393".into()),
             first: 30,
             sort_direction: SortDirection::DESC,
         };
@@ -100,7 +100,7 @@ mod tests {
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = GetUsersOptions {
-            after: "iie393939393".into(),
+            after: Some("iie393939393".into()),
             first: 30,
             sort_direction: SortDirection::DESC,
         };

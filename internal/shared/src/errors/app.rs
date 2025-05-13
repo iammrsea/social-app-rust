@@ -9,6 +9,7 @@ pub enum AppError {
     Database(String),
     Internal(String),
     NonEmptyString,
+    Base64(String),
 }
 
 impl fmt::Display for AppError {
@@ -19,6 +20,7 @@ impl fmt::Display for AppError {
             Self::Database(msg) => write!(f, "Database error: {}", msg),
             Self::Internal(msg) => write!(f, "Internal error: {}", msg),
             Self::NonEmptyString => write!(f, "Empty string is not allowed"),
+            Self::Base64(msg) => write!(f, "Base64 error: {}", msg),
         }
     }
 }
@@ -41,5 +43,11 @@ impl From<mongodb::error::Error> for AppError {
     fn from(err: mongodb::error::Error) -> Self {
         error!("Mongodb Error: {:#?}", err);
         Self::Database(err.to_string())
+    }
+}
+
+impl From<base64::DecodeError> for AppError {
+    fn from(err: base64::DecodeError) -> Self {
+        Self::Base64(err.to_string())
     }
 }

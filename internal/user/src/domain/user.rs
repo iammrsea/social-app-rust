@@ -44,6 +44,27 @@ impl User {
             badges: vec![],
         }
     }
+    pub fn new_with_all_fields(
+        id: String,
+        email: NonEmptyString,
+        username: NonEmptyString,
+        role: UserRole,
+        joined_at: Date,
+        ban_status: Option<Ban>,
+        updated_at: Date,
+        badges: Vec<String>,
+    ) -> Self {
+        Self {
+            id,
+            email: email.into(),
+            username: username.into(),
+            role,
+            joined_at,
+            ban_status,
+            updated_at,
+            badges,
+        }
+    }
     pub fn ban(&mut self, reason: NonEmptyString, ban_type: BanType) {
         if let Some(ban) = self.ban_status.as_mut() {
             ban.is_banned = true;
@@ -140,6 +161,19 @@ impl User {
 }
 
 impl Ban {
+    pub fn new(
+        reason: NonEmptyString,
+        is_banned: bool,
+        banned_at: Date,
+        ban_type: BanType,
+    ) -> Self {
+        Self {
+            is_banned,
+            reason: reason.into(),
+            banned_at,
+            ban_type,
+        }
+    }
     pub fn is_banned(&self) -> bool {
         self.is_banned
     }

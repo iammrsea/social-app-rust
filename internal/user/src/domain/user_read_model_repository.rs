@@ -6,7 +6,7 @@ use super::user_read_model::UserReadModel;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GetUsersOptions {
     pub first: u32,
-    pub after: String,
+    pub after: Option<String>,
     pub sort_direction: SortDirection,
 }
 #[derive(Debug, Clone, PartialEq)]

@@ -11,3 +11,5 @@ async-trait = "0.1"
 mongodb = "3.2.3"
 mockall = "0.13.1"
 tokio = { version = "1.45.0", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures = "0.3.31"
