@@ -14,7 +14,6 @@ pub async fn setup_test_mongo() -> &'static Client {
                 .expect("Failed to parse MongoDB options");
 
             let client = Client::with_options(options).expect("Failed to create MongoDB client");
-            // wait_until_ready(&client).await;
             client
         })
         .await
