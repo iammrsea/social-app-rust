@@ -113,7 +113,6 @@ mod tests {
         let ctx = AppContext::new().with_user(auth_user);
 
         let result = handler.handle(ctx, cmd).await;
-        println!("{:#?}", result);
         assert!(result.is_ok())
     }
 

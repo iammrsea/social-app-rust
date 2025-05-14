@@ -5,4 +5,5 @@ pub mod errors;
 pub mod guards;
 pub mod pagination;
 pub mod query_handler;
+pub mod test_utils;
 pub mod types;

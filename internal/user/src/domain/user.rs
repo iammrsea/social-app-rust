@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use chrono::{DateTime, Utc};
 use shared::guards::roles::UserRole;
 use shared::types::non_empty_string::NonEmptyString;
-use shared::types::{Date, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum BanType {
-    Definite { from: Date, to: Date },
+    Definite {
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+    },
     Indefinite,
 }
 
@@ -15,7 +18,7 @@ pub enum BanType {
 pub struct Ban {
     is_banned: bool,
     reason: String,
-    banned_at: Date,
+    banned_at: DateTime<Utc>,
     ban_type: BanType,
 }
 
@@ -25,9 +28,9 @@ pub struct User {
     email: String,
     username: String,
     role: UserRole,
-    joined_at: Date,
+    joined_at: DateTime<Utc>,
     ban_status: Option<Ban>,
-    updated_at: Date,
+    updated_at: DateTime<Utc>,
     badges: Vec<String>,
 }
 
@@ -49,9 +52,9 @@ impl User {
         email: NonEmptyString,
         username: NonEmptyString,
         role: UserRole,
-        joined_at: Date,
+        joined_at: DateTime<Utc>,
         ban_status: Option<Ban>,
-        updated_at: Date,
+        updated_at: DateTime<Utc>,
         badges: Vec<String>,
     ) -> Self {
         Self {
@@ -125,7 +128,7 @@ impl User {
 
 /// Implement getters;
 impl User {
-    pub fn joined_at(&self) -> &Date {
+    pub fn joined_at(&self) -> &DateTime<Utc> {
         &self.joined_at
     }
     pub fn id(&self) -> &str {
@@ -140,7 +143,7 @@ impl User {
     pub fn role(&self) -> &UserRole {
         &self.role
     }
-    pub fn updated_at(&self) -> &Date {
+    pub fn updated_at(&self) -> &DateTime<Utc> {
         &self.updated_at
     }
     pub fn ban_status(&self) -> Option<&Ban> {
@@ -164,7 +167,7 @@ impl Ban {
     pub fn new(
         reason: NonEmptyString,
         is_banned: bool,
-        banned_at: Date,
+        banned_at: DateTime<Utc>,
         ban_type: BanType,
     ) -> Self {
         Self {
@@ -183,7 +186,7 @@ impl Ban {
     pub fn ban_type(&self) -> &BanType {
         &self.ban_type
     }
-    pub fn banned_at(&self) -> &Date {
+    pub fn banned_at(&self) -> &DateTime<Utc> {
         &self.banned_at
     }
 }
@@ -192,7 +195,7 @@ impl Ban {
 mod tests {
     use super::UserRole::Moderator;
     use super::*;
-    use shared::types::Duration;
+    use chrono::Duration;
 
     #[test]
     fn ban_user_definitely() {

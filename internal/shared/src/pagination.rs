@@ -26,7 +26,7 @@ pub fn decode_cursor(cursor: &str) -> AppResult<String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::Utc;
+    use chrono::Utc;
 
     use super::*;
 

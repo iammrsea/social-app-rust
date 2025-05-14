@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+use chrono::{DateTime, Utc};
 use shared::guards::roles::UserRole;
-use shared::types::{Date, Utc};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum BanType {
-    Definite { from: Date, to: Date },
+    Definite {
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+    },
     Indefinite,
 }
 
@@ -13,7 +16,7 @@ pub enum BanType {
 pub struct Ban {
     pub is_banned: bool,
     pub reason: String,
-    pub banned_at: Date,
+    pub banned_at: DateTime<Utc>,
     pub ban_type: BanType,
 }
 
@@ -24,8 +27,8 @@ pub struct UserReadModel {
     pub email: String,
     pub role: UserRole,
     pub badges: Vec<String>,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub ban_status: Option<Ban>,
 }
 

@@ -1,3 +1,4 @@
+use bson::DateTime as BsonDateTime;
 use serde::{Deserialize, Serialize};
 use shared::types::non_empty_string::NonEmptyString;
 
@@ -7,24 +8,31 @@ use crate::domain::user::User;
 use crate::domain::user_read_model::Ban as BanReadModel;
 use crate::domain::user_read_model::BanType as BanTypeReadModel;
 use crate::domain::user_read_model::UserReadModel;
+use chrono::DateTime;
+use chrono::Utc;
 use shared::guards::roles::UserRole;
-use shared::types::Date;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum BanType {
-    Definite { from: Date, to: Date },
+    Definite {
+        #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+        from: DateTime<Utc>,
+        #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+        to: DateTime<Utc>,
+    },
     Indefinite,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Ban {
     pub is_banned: bool,
     pub reason: String,
-    pub banned_at: Date,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub banned_at: DateTime<Utc>,
     pub ban_type: BanType,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct UserDocument {
     #[serde(rename = "_id")]
     pub id: String,
@@ -32,8 +40,10 @@ pub struct UserDocument {
     pub email: String,
     pub role: UserRole,
     pub badges: Vec<String>,
-    pub created_at: Date,
-    pub updated_at: Date,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub created_at: DateTime<Utc>,
+    #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
+    pub updated_at: DateTime<Utc>,
     pub ban_status: Option<Ban>,
 }
 
@@ -96,6 +106,7 @@ impl From<UserDocument> for User {
                 ban_type,
             )
         });
+
         User::new_with_all_fields(
             value.id,
             NonEmptyString::new(value.email).unwrap(),
@@ -113,15 +124,15 @@ impl Into<UserDocument> for User {
         let ban_status = self.ban_status().map(|b| {
             let ban_type = match b.ban_type() {
                 BanTypeDomain::Definite { from, to } => BanType::Definite {
-                    from: from.to_utc(),
-                    to: to.to_utc(),
+                    from: truncate_chrono(from),
+                    to: truncate_chrono(to),
                 },
                 BanTypeDomain::Indefinite => BanType::Indefinite,
             };
             Ban {
                 is_banned: b.is_banned(),
                 reason: b.reason_for_ban().to_string(),
-                banned_at: b.banned_at().to_utc(),
+                banned_at: truncate_chrono(b.banned_at()),
                 ban_type,
             }
         });
@@ -131,9 +142,13 @@ impl Into<UserDocument> for User {
             email: self.email().to_string(),
             role: self.role().to_owned(),
             badges: self.badges().to_owned(),
-            created_at: self.joined_at().to_utc(),
-            updated_at: self.updated_at().to_utc(),
+            created_at: truncate_chrono(self.joined_at()),
+            updated_at: truncate_chrono(self.updated_at()),
             ban_status,
         }
     }
+}
+
+fn truncate_chrono(date: &DateTime<Utc>) -> DateTime<Utc> {
+    BsonDateTime::from_millis(date.to_owned().timestamp_millis()).to_chrono()
 }

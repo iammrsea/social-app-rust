@@ -1,12 +1,8 @@
 use async_trait::async_trait;
+use bson::{Document, doc};
 use chrono::{DateTime, Utc};
 use futures::stream::StreamExt;
-use mongodb::{
-    Collection, Database,
-    bson::{Bson, Document, doc},
-    options::FindOptions,
-};
-
+use mongodb::{Collection, Database, options::FindOptions};
 use shared::{errors::app::AppError, types::AppResult};
 
 use crate::domain::{
@@ -45,14 +41,12 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
 
         // Build filter
         let mut filter = Document::new();
-
         if let Some(after) = &opts.after {
             let created_at = DateTime::parse_from_rfc3339(&after)
                 .map_err(|e| AppError::Internal(e.to_string()))?
                 .with_timezone(&Utc);
             let op = if sort_value == 1 { "$gt" } else { "$lt" };
-            let created_at = mongodb::bson::DateTime::from_millis(created_at.timestamp_millis());
-            filter.insert("created_at", doc! {op: Bson::DateTime(created_at)});
+            filter.insert("created_at", doc! {op: created_at});
         };
 
         let mut cursor = self
@@ -89,5 +83,130 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
             .await?
             .map(|doc| doc.into());
         Ok(doc)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::user::User;
+
+    use super::*;
+    use chrono::Duration;
+    use shared::test_utils;
+    use utils::{insert_many_users, insert_user};
+    use uuid::Uuid;
+
+    #[tokio::test]
+    async fn get_user_by_id() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        let user = User::new_test_user(None);
+        insert_user(db.clone(), user.clone()).await;
+        let user_repo = MongoUserReadModelRepository::new(db.clone());
+        let user_from_db = user_repo.get_user_by_id(user.id()).await.unwrap().unwrap();
+        assert_eq!(user_from_db.id, user.id());
+    }
+
+    #[tokio::test]
+    async fn get_user_by_email() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        let user = User::new_test_user(None);
+        insert_user(db.clone(), user.clone()).await;
+        let user_repo = MongoUserReadModelRepository::new(db.clone());
+        let user_from_db = user_repo
+            .get_user_by_email(user.email())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(user_from_db.email, user.email());
+    }
+
+    #[tokio::test]
+    async fn get_users() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        insert_many_users(db.clone(), 20).await;
+        let user_repo = MongoUserReadModelRepository::new(db.clone());
+        let opts = GetUsersOptions {
+            first: 10,
+            after: None,
+            sort_direction: SortDirection::ASC,
+        };
+        let result = user_repo.get_users(&opts).await.unwrap();
+        assert_eq!(result.users.len(), 10);
+        assert_eq!(true, result.has_next);
+    }
+
+    #[tokio::test]
+    async fn get_users_after_cursor_works_asc() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        insert_many_users(db.clone(), 10).await;
+        let user_repo = MongoUserReadModelRepository::new(db.clone());
+        let after = (Utc::now() + Duration::hours(1)).to_rfc3339();
+        let opts = GetUsersOptions {
+            first: 10,
+            after: Some(after.clone()),
+            sort_direction: SortDirection::ASC,
+        };
+        let result = user_repo.get_users(&opts).await.unwrap();
+
+        assert_eq!(8, result.users.len());
+        assert_eq!(false, result.has_next);
+    }
+
+    #[tokio::test]
+    async fn get_users_after_cursor_works_desc() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        insert_many_users(db.clone(), 10).await;
+        let user_repo = MongoUserReadModelRepository::new(db.clone());
+        let after = (Utc::now() + Duration::hours(1)).to_rfc3339();
+        let opts = GetUsersOptions {
+            first: 10,
+            after: Some(after.clone()),
+            sort_direction: SortDirection::DESC,
+        };
+        let result = user_repo.get_users(&opts).await.unwrap();
+
+        assert_eq!(2, result.users.len());
+        assert_eq!(false, result.has_next);
+    }
+
+    mod utils {
+        use chrono::Duration;
+        use shared::{guards::roles::UserRole, types::non_empty_string::NonEmptyString};
+
+        use super::*;
+
+        pub async fn insert_user(db: Database, user: User) {
+            let c: Collection<UserDocument> = db.collection("users");
+            let user: UserDocument = user.into();
+            c.insert_one(user).await.unwrap();
+        }
+
+        pub async fn insert_many_users(db: Database, num: usize) {
+            let c: Collection<UserDocument> = db.collection("users");
+            let mut users: Vec<User> = Vec::new();
+
+            for i in 0..num {
+                let user = User::new_with_all_fields(
+                    Uuid::new_v4().to_string(),
+                    NonEmptyString::new(format!("test-{}@gmail.com", Uuid::new_v4().to_string()))
+                        .unwrap(),
+                    NonEmptyString::new(format!("{}-test-{}", Uuid::new_v4().to_string(), i))
+                        .unwrap(),
+                    UserRole::Regular,
+                    Utc::now() + Duration::hours(i as i64),
+                    None,
+                    Utc::now() + Duration::hours(i as i64),
+                    vec![],
+                );
+                users.push(user);
+            }
+            let users: Vec<UserDocument> = users.into_iter().map(|u| u.into()).collect();
+            c.insert_many(users).await.unwrap();
+        }
     }
 }
