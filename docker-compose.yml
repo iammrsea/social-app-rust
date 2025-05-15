@@ -1,0 +1,47 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: social-app-mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - social-app-network
+    restart: unless-stopped
+
+  mongo-init:
+    image: mongo:7.0
+    container_name: social-app-mongo-init
+    depends_on:
+      - mongodb
+    volumes:
+      - ./scripts/init-replica.sh:/init-replica.sh
+    entrypoint: ["bash", "/init-replica.sh"]
+    networks:
+      - social-app-network
+    restart: "no"
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: social-app-mongo-express
+    depends_on:
+      - mongodb
+      - mongo-init
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+    ports:
+      - "8081:8081"
+    networks:
+      - social-app-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  postgres_data:
+
+networks:
+  social-app-network:
+    driver: bridge
