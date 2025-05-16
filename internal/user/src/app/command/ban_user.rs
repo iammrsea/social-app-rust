@@ -31,8 +31,8 @@ impl BanUserHandler {
 
 #[async_trait]
 impl CommandHanlder<BanUser> for BanUserHandler {
-    async fn handle(&self, ctx: AppContext, cmd: BanUser) -> AppResult<()> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: BanUser) -> AppResult<()> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::BanUser)?;
         self.repo
@@ -93,7 +93,7 @@ mod tests {
 
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
 
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
 
@@ -116,7 +116,7 @@ mod tests {
             ban_type: BanType::Indefinite,
         };
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err());
     }
 }

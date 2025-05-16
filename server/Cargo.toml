@@ -4,4 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-services = { path = "../internal/services" }
+ports = { path = "../internal/ports" }
+infra = { path = "../internal/infra" }
+shared = { path = "../internal/shared" }
+axum = "0.8.4"
+async-graphql-axum = "7.0.16"
+async-graphql = "7.0.16"
+tokio = { version = "1.45.0", features = ["full"] }

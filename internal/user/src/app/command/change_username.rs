@@ -31,8 +31,8 @@ impl ChangeUsernameHandler {
 
 #[async_trait]
 impl CommandHanlder<ChangeUsername> for ChangeUsernameHandler {
-    async fn handle(&self, ctx: AppContext, cmd: ChangeUsername) -> AppResult<()> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: ChangeUsername) -> AppResult<()> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
 
         self.guard.can_change_username(&auth_user.id, &auth_user)?;
 
@@ -112,7 +112,7 @@ mod tests {
 
         let ctx = AppContext::new().with_user(auth_user);
 
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
 
@@ -146,7 +146,7 @@ mod tests {
         let handler = ChangeUsernameHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
 
         let ctx = AppContext::new().with_user(auth_user);
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err());
     }
 }

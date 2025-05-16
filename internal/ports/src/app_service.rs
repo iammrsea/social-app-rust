@@ -8,6 +8,7 @@ use infra::storage::{AppStorage, StorageEngine};
 pub struct Services {
     pub user_service: UserService,
 }
+
 pub struct AppService {
     pub services: Services,
 }

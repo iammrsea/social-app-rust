@@ -30,8 +30,8 @@ impl AwardBadgeHandler {
 
 #[async_trait]
 impl CommandHanlder<AwardBadge> for AwardBadgeHandler {
-    async fn handle(&self, ctx: AppContext, cmd: AwardBadge) -> AppResult<()> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: AwardBadge) -> AppResult<()> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::AwardBadge)?;
         self.repo
@@ -97,7 +97,7 @@ mod tests {
 
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
 
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
 
@@ -119,7 +119,7 @@ mod tests {
             badge,
         };
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err());
     }
 }

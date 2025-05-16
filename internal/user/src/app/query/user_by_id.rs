@@ -30,8 +30,8 @@ impl GetUserByIdHander {
 
 #[async_trait]
 impl QueryHandler<GetUserById, UserReadModel> for GetUserByIdHander {
-    async fn handle(&self, ctx: AppContext, cmd: GetUserById) -> AppResult<UserReadModel> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: GetUserById) -> AppResult<UserReadModel> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ViewUser)?;
         let user = self.repo.get_user_by_id(&cmd.id).await?;
@@ -87,7 +87,7 @@ mod tests {
 
         let handler = GetUserByIdHander::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
     #[tokio::test]
@@ -113,7 +113,7 @@ mod tests {
 
         let handler = GetUserByIdHander::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err())
     }
 }

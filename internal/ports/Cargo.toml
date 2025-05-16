@@ -1,9 +1,11 @@
 [package]
-name = "services"
+name = "ports"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+async-graphql = "7.0.16"
 user = { path = "../user" }
 shared = { path = "../shared" }
 infra = { path = "../infra" }
+mockall = "0.13.1"

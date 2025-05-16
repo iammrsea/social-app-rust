@@ -41,7 +41,7 @@ impl UserService {
             },
             query_handler: QueryHandler {
                 get_user_by_id: GetUserByIdHander::new(user_read_repo.clone(), guard.clone()),
-                get_user_email: GetUserByEmailHander::new(user_read_repo.clone(), guard.clone()),
+                get_user_by_email: GetUserByEmailHander::new(user_read_repo.clone(), guard.clone()),
                 get_users: GetUsersHandler::new(user_read_repo.clone(), guard.clone()),
             },
         }
@@ -60,6 +60,6 @@ pub struct CommandHandler {
 
 pub struct QueryHandler {
     pub get_user_by_id: GetUserByIdHander,
-    pub get_user_email: GetUserByEmailHander,
+    pub get_user_by_email: GetUserByEmailHander,
     pub get_users: GetUsersHandler,
 }

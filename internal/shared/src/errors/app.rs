@@ -2,7 +2,7 @@ use crate::errors::{content::ContentDomainError, user::UserDomainError};
 use std::fmt;
 use tracing::error;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AppError {
     User(UserDomainError),
     Content(ContentDomainError),

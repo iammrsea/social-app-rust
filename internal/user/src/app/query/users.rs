@@ -30,8 +30,8 @@ impl GetUsersHandler {
 
 #[async_trait]
 impl QueryHandler<GetUsersOptions, Result> for GetUsersHandler {
-    async fn handle(&self, ctx: AppContext, cmd: GetUsersOptions) -> AppResult<Result> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: GetUsersOptions) -> AppResult<Result> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ListUsers)?;
         let resp = self.repo.get_users(&cmd).await?;
@@ -90,7 +90,7 @@ mod tests {
         let handler = GetUsersHandler::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Moderator));
 
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
 
@@ -115,7 +115,7 @@ mod tests {
         let handler = GetUsersHandler::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
 
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err())
     }
 }

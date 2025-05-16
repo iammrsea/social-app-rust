@@ -31,8 +31,8 @@ impl CreateAccountHandler {
 
 #[async_trait]
 impl CommandHanlder<CreateAccount> for CreateAccountHandler {
-    async fn handle(&self, ctx: AppContext, cmd: CreateAccount) -> AppResult<()> {
-        let auth_user = get_auth_user_from_ctx(ctx);
+    async fn handle(&self, ctx: &AppContext, cmd: CreateAccount) -> AppResult<()> {
+        let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::CreateAccount)?;
 
@@ -102,7 +102,7 @@ mod tests {
 
         let handler = CreateAccountHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(auth_user);
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_ok())
     }
     #[tokio::test]
@@ -137,7 +137,7 @@ mod tests {
 
         let handler = CreateAccountHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
         let ctx = AppContext::new().with_user(auth_user);
-        let result = handler.handle(ctx, cmd).await;
+        let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err())
     }
 }
