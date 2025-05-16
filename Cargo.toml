@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "internal/content",
-    "internal/infra", "internal/ports",
-    "internal/services",
+    "internal/infra",
+    "internal/ports",
     "internal/shared",
     "internal/user",
     "server",

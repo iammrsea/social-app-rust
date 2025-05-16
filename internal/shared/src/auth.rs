@@ -42,6 +42,6 @@ impl AuthUser {
     }
 }
 
-pub fn get_auth_user_from_ctx<'ctx>(ctx: &'ctx AppContext) -> &'ctx AuthUser {
+pub fn get_auth_user_from_ctx(ctx: &AppContext) -> &AuthUser {
     ctx.user.as_ref().unwrap()
 }
