@@ -10,6 +10,7 @@ pub enum AppError {
     Internal(String),
     NonEmptyString,
     Base64(String),
+    Validation(String),
 }
 
 impl fmt::Display for AppError {
@@ -21,6 +22,7 @@ impl fmt::Display for AppError {
             Self::Internal(msg) => write!(f, "Internal error: {}", msg),
             Self::NonEmptyString => write!(f, "Empty string is not allowed"),
             Self::Base64(msg) => write!(f, "Base64 error: {}", msg),
+            Self::Validation(msg) => write!(f, "Validation error: {}", msg),
         }
     }
 }
@@ -49,5 +51,13 @@ impl From<mongodb::error::Error> for AppError {
 impl From<base64::DecodeError> for AppError {
     fn from(err: base64::DecodeError) -> Self {
         Self::Base64(err.to_string())
+    }
+}
+
+impl From<validator::ValidationErrors> for AppError {
+    fn from(err: validator::ValidationErrors) -> Self {
+        let json =
+            serde_json::to_string(&err).unwrap_or_else(|_| format!("{{\"error\": \"{}\"}}", err));
+        Self::Validation(json)
     }
 }

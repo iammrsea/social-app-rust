@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
+use async_graphql::InputObject;
 use async_trait::async_trait;
+
+use serde::Deserialize;
+use validator::Validate;
 
 use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
@@ -13,8 +17,11 @@ use shared::{
 use crate::domain::{user::User, user_repository::UserRepository};
 use crate::guards::UserGuards;
 
+#[derive(Debug, Clone, Validate, Deserialize, InputObject)]
 pub struct CreateAccount {
+    #[validate(email)]
     pub email: String,
+    #[validate(length(min = 3, max = 40))]
     pub username: String,
 }
 
@@ -32,6 +39,7 @@ impl CreateAccountHandler {
 #[async_trait]
 impl CommandHanlder<CreateAccount> for CreateAccountHandler {
     async fn handle(&self, ctx: &AppContext, cmd: CreateAccount) -> AppResult<()> {
+        cmd.validate()?;
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::CreateAccount)?;
@@ -138,5 +146,20 @@ mod tests {
         let ctx = AppContext::new().with_user(auth_user);
         let result = handler.handle(&ctx, cmd).await;
         assert!(result.is_err())
+    }
+
+    #[tokio::test]
+    async fn validation_errors() {
+        let mock_user_repo = MockUserRepository::new();
+        let mock_guard = MockUserGuards::new();
+
+        let cmd = CreateAccount {
+            email: "invalid_email".into(),
+            username: "us".into(),
+        };
+        let handler = CreateAccountHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
+        let result = handler.handle(&ctx, cmd).await;
+        assert!(result.is_err(), "Expected validation error");
     }
 }

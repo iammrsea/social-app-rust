@@ -2050,8 +2050,10 @@ dependencies = [
  "mongodb",
  "once_cell",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
+ "validator",
 ]
 
 [[package]]

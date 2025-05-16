@@ -1,5 +1,7 @@
 pub mod graphql {
-    use async_graphql::http::{GraphQLPlaygroundConfig, GraphiQLSource, playground_source};
+    use async_graphql::http::{
+        GraphQLPlaygroundConfig, GraphiQLSource, graphiql_source, playground_source,
+    };
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
     use axum::extract::State;
     use axum::response::{Html, IntoResponse};
@@ -9,7 +11,10 @@ pub mod graphql {
     }
 
     pub async fn graphiql() -> impl IntoResponse {
-        GraphiQLSource::build().endpoint("/graphql").finish()
+        Html(graphiql_source(
+            &GraphiQLSource::build().endpoint("/graphql").finish(),
+            None,
+        ))
     }
     pub async fn graphql_handler(
         schema: State<ports::graphql::AppSchema>,

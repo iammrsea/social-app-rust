@@ -1,4 +1,4 @@
-use async_graphql::{EmptyMutation, EmptySubscription};
+use async_graphql::EmptySubscription;
 use axum::{
     Router,
     routing::{get, post},
@@ -8,7 +8,7 @@ use axum::{
 use infra::storage::StorageEngine;
 use ports::{
     app_service::AppService,
-    graphql::{AppSchema, Query},
+    graphql::{AppSchema, Mutation, Query},
 };
 use server::graphql::{graphiql, graphql_handler, graphql_playground};
 use shared::config::Config;
@@ -17,7 +17,7 @@ use shared::config::Config;
 async fn main() {
     let app_service = AppService::build(StorageEngine::MongoDB).await;
 
-    let schema = AppSchema::build(Query::default(), EmptyMutation, EmptySubscription)
+    let schema = AppSchema::build(Query::default(), Mutation::default(), EmptySubscription)
         .data(app_service)
         .finish();
 
