@@ -6,7 +6,7 @@ use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
     guards::permissions::UserPermission,
-    types::{AppResult, non_empty_string::NonEmptyString},
+    types::AppResult,
 };
 
 use crate::domain::{user::BanType, user_repository::UserRepository};
@@ -14,7 +14,7 @@ use crate::guards::UserGuards;
 
 pub struct BanUser {
     pub user_id: String,
-    pub reason: NonEmptyString,
+    pub reason: String,
     pub ban_type: BanType,
 }
 
@@ -61,7 +61,6 @@ mod tests {
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
-        types::non_empty_string::NonEmptyString,
     };
 
     #[tokio::test]
@@ -87,7 +86,7 @@ mod tests {
         let handler = BanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
         let cmd = BanUser {
             user_id: User::test_user_id(),
-            reason: NonEmptyString::new("Abuse".into()).unwrap(),
+            reason: "Abuse".into(),
             ban_type: BanType::Indefinite,
         };
 
@@ -112,7 +111,7 @@ mod tests {
         let handler = BanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
         let cmd = BanUser {
             user_id: User::test_user_id(),
-            reason: NonEmptyString::new("Abuse".into()).unwrap(),
+            reason: "Abuse".into(),
             ban_type: BanType::Indefinite,
         };
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));

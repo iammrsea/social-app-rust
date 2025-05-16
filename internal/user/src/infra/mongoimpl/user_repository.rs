@@ -93,7 +93,6 @@ mod tests {
 
     use super::*;
     use shared::test_utils;
-    use shared::types::non_empty_string::NonEmptyString;
     use utils::{assert_user_in_db_equals, get_user_from_db, insert_user};
     use uuid::Uuid;
 
@@ -173,8 +172,7 @@ mod tests {
             .ban_user(
                 user.id(),
                 Box::new(|u| {
-                    let reason = NonEmptyString::new("abuse".into()).unwrap();
-                    u.ban(reason, BanType::Indefinite);
+                    u.ban("abuse".into(), BanType::Indefinite);
                 }),
             )
             .await
@@ -218,7 +216,7 @@ mod tests {
             .award_badge(
                 user.id(),
                 Box::new(|u| {
-                    u.award_badge(NonEmptyString::new("Helpful".into()).unwrap());
+                    u.award_badge("Helpful".into());
                 }),
             )
             .await
@@ -233,7 +231,7 @@ mod tests {
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let mut user = User::new_test_user(None);
 
-        let badge = NonEmptyString::new("Helpful".into()).unwrap();
+        let badge = "Helpful".to_string();
         user.award_badge(badge.clone());
 
         insert_user(db.clone(), user.clone()).await;
@@ -258,7 +256,7 @@ mod tests {
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
 
-        let username = NonEmptyString::new("new_username".into()).unwrap();
+        let username = "new_username".to_string();
 
         let expected_username = username.clone();
 

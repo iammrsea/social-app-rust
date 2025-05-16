@@ -59,7 +59,6 @@ mod tests {
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
-        types::non_empty_string::NonEmptyString,
     };
 
     #[tokio::test]
@@ -77,7 +76,7 @@ mod tests {
             .withf(move |uuid, _| uuid == &User::test_user_id())
             .returning(|_uid, update_fn| {
                 let mut user = User::new_test_user(None);
-                let reason = NonEmptyString::new("abuse".into()).unwrap();
+                let reason = "abuse".to_string();
                 user.ban(reason, BanType::Indefinite);
                 update_fn(&mut user);
                 assert_eq!(None, user.ban_status(), "expected user not to be banned",);

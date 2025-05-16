@@ -6,7 +6,7 @@ use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
     guards::permissions::UserPermission,
-    types::{AppResult, non_empty_string::NonEmptyString},
+    types::AppResult,
 };
 
 use crate::domain::user_repository::UserRepository;
@@ -14,7 +14,7 @@ use crate::guards::UserGuards;
 
 pub struct RevokeBadge {
     pub user_id: String,
-    pub badge: NonEmptyString,
+    pub badge: String,
 }
 
 pub struct RevokeBadgeHandler {
@@ -58,7 +58,6 @@ mod tests {
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
-        types::non_empty_string::NonEmptyString,
     };
 
     #[tokio::test]
@@ -66,7 +65,7 @@ mod tests {
         let mut mock_user_repo = MockUserRepository::new();
         let mut mock_guard = MockUserGuards::new();
 
-        let badge = NonEmptyString::new("Helpful".into()).unwrap();
+        let badge = "Helpful".to_string();
         let old_badge = badge.clone();
 
         mock_guard
@@ -106,7 +105,7 @@ mod tests {
     async fn revoke_badge_unauthorized() {
         let mut mock_user_repo = MockUserRepository::new();
         let mut mock_guard = MockUserGuards::new();
-        let badge = NonEmptyString::new("Helpful".into()).unwrap();
+        let badge = "Helpful".to_string();
         mock_guard
             .expect_authorize()
             .with(eq(UserRole::Regular), eq(UserPermission::RevokeBadge))

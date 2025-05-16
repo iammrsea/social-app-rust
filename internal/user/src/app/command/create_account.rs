@@ -7,15 +7,15 @@ use shared::{
     command_handler::CommandHanlder,
     errors::user::UserDomainError,
     guards::{permissions::UserPermission, roles::UserRole},
-    types::{AppResult, non_empty_string::NonEmptyString},
+    types::AppResult,
 };
 
 use crate::domain::{user::User, user_repository::UserRepository};
 use crate::guards::UserGuards;
 
 pub struct CreateAccount {
-    pub email: NonEmptyString,
-    pub username: NonEmptyString,
+    pub email: String,
+    pub username: String,
 }
 
 pub struct CreateAccountHandler {
@@ -55,7 +55,6 @@ mod tests {
         auth::{AppContext, AuthUser},
         command_handler::CommandHanlder,
         guards::{permissions::UserPermission, roles::UserRole},
-        types::non_empty_string::NonEmptyString,
     };
 
     use crate::{
@@ -70,8 +69,8 @@ mod tests {
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = CreateAccount {
-            email: NonEmptyString::new("test@gmail.com".into()).unwrap(),
-            username: NonEmptyString::new("test".into()).unwrap(),
+            email: "test@gmail.com".into(),
+            username: "test".into(),
         };
 
         let expected_username = cmd.username.clone();
@@ -111,8 +110,8 @@ mod tests {
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = CreateAccount {
-            email: NonEmptyString::new("test@gmail.com".into()).unwrap(),
-            username: NonEmptyString::new("test".into()).unwrap(),
+            email: "test@gmail.com".into(),
+            username: "test".into(),
         };
 
         let expected_username = cmd.username.clone();

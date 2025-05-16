@@ -176,7 +176,7 @@ mod tests {
 
     mod utils {
         use chrono::Duration;
-        use shared::{guards::roles::UserRole, types::non_empty_string::NonEmptyString};
+        use shared::guards::roles::UserRole;
 
         use super::*;
 
@@ -193,10 +193,8 @@ mod tests {
             for i in 0..num {
                 let user = User::new_with_all_fields(
                     Uuid::new_v4().to_string(),
-                    NonEmptyString::new(format!("test-{}@gmail.com", Uuid::new_v4().to_string()))
-                        .unwrap(),
-                    NonEmptyString::new(format!("{}-test-{}", Uuid::new_v4().to_string(), i))
-                        .unwrap(),
+                    format!("test-{}@gmail.com", Uuid::new_v4().to_string()),
+                    format!("{}-test-{}", Uuid::new_v4().to_string(), i),
                     UserRole::Regular,
                     Utc::now() + Duration::hours(i as i64),
                     None,

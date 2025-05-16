@@ -6,7 +6,7 @@ use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
     errors::user::UserDomainError,
-    types::{AppResult, non_empty_string::NonEmptyString},
+    types::AppResult,
 };
 
 use crate::domain::user_repository::UserRepository;
@@ -15,7 +15,7 @@ use crate::guards::UserGuards;
 #[derive(Clone)]
 pub struct ChangeUsername {
     pub user_id: String,
-    pub username: NonEmptyString,
+    pub username: String,
 }
 
 pub struct ChangeUsernameHandler {
@@ -65,7 +65,6 @@ mod tests {
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
-        types::non_empty_string::NonEmptyString,
     };
 
     #[tokio::test]
@@ -77,7 +76,7 @@ mod tests {
 
         let cmd = ChangeUsername {
             user_id: auth_user.id.clone(),
-            username: NonEmptyString::new("newUsername".into()).unwrap(),
+            username: "newUsername".into(),
         };
         let expected_auth_user_id = auth_user.id.clone();
         let expected_auth_user = auth_user.clone();
@@ -125,7 +124,7 @@ mod tests {
 
         let cmd = ChangeUsername {
             user_id: auth_user.id.clone(),
-            username: NonEmptyString::new("newUsername".into()).unwrap(),
+            username: "newUsername".into(),
         };
         let expected_auth_user_id = auth_user.id.clone();
         let expected_auth_user = auth_user.clone();

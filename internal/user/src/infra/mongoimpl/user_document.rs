@@ -1,6 +1,5 @@
 use bson::DateTime as BsonDateTime;
 use serde::{Deserialize, Serialize};
-use shared::types::non_empty_string::NonEmptyString;
 
 use crate::domain::user::Ban as BanDomain;
 use crate::domain::user::BanType as BanTypeDomain;
@@ -99,18 +98,13 @@ impl From<UserDocument> for User {
                 BanType::Definite { from, to } => BanTypeDomain::Definite { from, to },
                 BanType::Indefinite => BanTypeDomain::Indefinite,
             };
-            BanDomain::new(
-                NonEmptyString::new(b.reason.clone()).unwrap(),
-                b.is_banned,
-                b.banned_at,
-                ban_type,
-            )
+            BanDomain::new(b.reason.clone(), b.is_banned, b.banned_at, ban_type)
         });
 
         User::new_with_all_fields(
             value.id,
-            NonEmptyString::new(value.email).unwrap(),
-            NonEmptyString::new(value.username).unwrap(),
+            value.email,
+            value.username,
             value.role,
             value.created_at,
             ban_status,
