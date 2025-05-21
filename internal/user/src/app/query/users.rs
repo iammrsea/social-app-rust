@@ -6,10 +6,10 @@ use shared::{
     guards::permissions::UserPermission,
     pagination::{PaginatedQueryResult, PaginationInfo},
     query_handler::QueryHandler,
-    types::AppResult,
 };
 
 use crate::domain::{
+    errors::{UserDomainError, UserDomainResult},
     user_read_model::UserReadModel,
     user_read_model_repository::{GetUsersOptions, UserReadModelRepository},
 };
@@ -29,8 +29,8 @@ impl GetUsersHandler {
 }
 
 #[async_trait]
-impl QueryHandler<GetUsersOptions, Result> for GetUsersHandler {
-    async fn handle(&self, ctx: &AppContext, cmd: GetUsersOptions) -> AppResult<Result> {
+impl QueryHandler<GetUsersOptions, Result, UserDomainError> for GetUsersHandler {
+    async fn handle(&self, ctx: &AppContext, cmd: GetUsersOptions) -> UserDomainResult<Result> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ListUsers)?;
@@ -47,8 +47,9 @@ impl QueryHandler<GetUsersOptions, Result> for GetUsersHandler {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use mockall::predicate::eq;
-    use shared::{auth::AuthUser, errors::user::UserDomainError, guards::roles::UserRole};
+    use shared::{auth::AuthUser, guards::roles::UserRole};
 
     use crate::{
         domain::user_read_model_repository::{
@@ -56,8 +57,6 @@ mod tests {
         },
         guards::MockUserGuards,
     };
-
-    use super::*;
 
     #[tokio::test]
     async fn get_users_success() {
@@ -108,7 +107,7 @@ mod tests {
         mock_guard
             .expect_authorize()
             .with(eq(UserRole::Regular), eq(UserPermission::ListUsers))
-            .returning(|_, _| Err(UserDomainError::Unauthorized.into()));
+            .returning(|_, _| Err(UserDomainError::Unauthorized));
 
         mock_user_read_repo.expect_get_users().never();
 

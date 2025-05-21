@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use shared::types::AppResult;
 
+use super::errors::UserDomainResult;
 use super::user_read_model::UserReadModel;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,7 +24,7 @@ pub struct GetUsersResult {
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait UserReadModelRepository: Send + Sync {
-    async fn get_users(&self, opts: &GetUsersOptions) -> AppResult<GetUsersResult>;
-    async fn get_user_by_id(&self, id: &str) -> AppResult<Option<UserReadModel>>;
-    async fn get_user_by_email(&self, email: &str) -> AppResult<Option<UserReadModel>>;
+    async fn get_users(&self, opts: &GetUsersOptions) -> UserDomainResult<GetUsersResult>;
+    async fn get_user_by_id(&self, id: &str) -> UserDomainResult<Option<UserReadModel>>;
+    async fn get_user_by_email(&self, email: &str) -> UserDomainResult<Option<UserReadModel>>;
 }

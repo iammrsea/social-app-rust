@@ -1,3 +1,4 @@
+use auth::auth_service::AuthService;
 use infra::guards_impl::GuardsImpl;
 use std::sync::Arc;
 
@@ -7,6 +8,7 @@ use infra::storage::{AppStorage, StorageEngine};
 
 pub struct Services {
     pub user_service: UserService,
+    pub auth_service: AuthService,
 }
 
 pub struct AppService {
@@ -20,6 +22,7 @@ impl AppService {
         let guard = Arc::new(GuardsImpl::new());
         let services = Services {
             user_service: UserService::new(repos.user_repo, repos.user_read_repo, guard),
+            auth_service: AuthService::new(repos.otp_repo),
             // Add more services for other app domains here
         };
         Self { services }

@@ -1,3 +1,4 @@
+pub mod errors;
 pub mod user;
 pub mod user_read_model;
 pub mod user_read_model_repository;

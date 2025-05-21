@@ -1,6 +1,5 @@
 use shared::guards::permissions::Permission;
 use shared::guards::roles::UserRole;
-use shared::{errors::user::UserDomainError, types::AppResult};
 
 pub struct RbacEngine;
 
@@ -8,10 +7,10 @@ impl RbacEngine {
     pub fn new() -> Self {
         Self
     }
-    pub fn authorize(&self, role: &UserRole, perm: &Permission) -> AppResult<()> {
+    pub fn authorize(&self, role: &UserRole, perm: &Permission) -> Result<(), String> {
         let p = super::policy::Policy::new();
         if !p.is_allowed(role, perm) {
-            return Err(UserDomainError::Unauthorized.into());
+            return Err("Unauthorized".to_string());
         }
         Ok(())
     }

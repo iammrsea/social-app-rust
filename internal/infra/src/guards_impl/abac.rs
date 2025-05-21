@@ -1,4 +1,5 @@
-use shared::{auth::AuthUser, types::AppResult};
+use ::user::domain::errors::UserDomainResult;
+use shared::auth::AuthUser;
 
 pub struct AbacEngine;
 
@@ -6,27 +7,26 @@ impl AbacEngine {
     pub fn new() -> Self {
         Self
     }
-    pub fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> AppResult<()> {
+    pub fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> UserDomainResult<()> {
         user::can_change_username(user_id, auth_user)
     }
 }
 
 pub mod user {
     use shared::auth::AuthUser;
-    use shared::errors::user::UserDomainError;
     use shared::guards::roles::UserRole::{Admin, Guest, Moderator, Regular};
-    use shared::types::AppResult;
+    use user::domain::errors::{UserDomainError, UserDomainResult};
 
-    pub fn can_change_username(user_id: &str, auth_user: &AuthUser) -> AppResult<()> {
+    pub fn can_change_username(user_id: &str, auth_user: &AuthUser) -> UserDomainResult<()> {
         match auth_user.role {
             Admin => Ok(()),
             Regular | Moderator => {
                 if user_id == auth_user.id {
                     return Ok(());
                 }
-                return Err(UserDomainError::Unauthorized.into());
+                return Err(UserDomainError::Unauthorized);
             }
-            Guest => Err(UserDomainError::Unauthorized.into()),
+            Guest => Err(UserDomainError::Unauthorized),
         }
     }
 

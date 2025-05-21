@@ -3,9 +3,9 @@ use bson::{Document, doc};
 use chrono::{DateTime, Utc};
 use futures::stream::StreamExt;
 use mongodb::{Collection, Database, options::FindOptions};
-use shared::{errors::app::AppError, types::AppResult};
 
 use crate::domain::{
+    errors::{UserDomainError, UserDomainResult},
     user_read_model::UserReadModel,
     user_read_model_repository::{
         GetUsersOptions, GetUsersResult, SortDirection, UserReadModelRepository,
@@ -15,7 +15,7 @@ use crate::domain::{
 use super::user_document::UserDocument;
 
 pub struct MongoUserReadModelRepository {
-    pub collection: Collection<UserDocument>, // TODO: remove pub from collection field
+    collection: Collection<UserDocument>,
 }
 
 impl MongoUserReadModelRepository {
@@ -28,7 +28,7 @@ impl MongoUserReadModelRepository {
 
 #[async_trait]
 impl UserReadModelRepository for MongoUserReadModelRepository {
-    async fn get_users(&self, opts: &GetUsersOptions) -> AppResult<GetUsersResult> {
+    async fn get_users(&self, opts: &GetUsersOptions) -> UserDomainResult<GetUsersResult> {
         let mut find_options = FindOptions::default();
         find_options.limit = Some((opts.first + 1) as i64);
 
@@ -43,7 +43,7 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
         let mut filter = Document::new();
         if let Some(after) = &opts.after {
             let created_at = DateTime::parse_from_rfc3339(&after)
-                .map_err(|e| AppError::Internal(e.to_string()))?
+                .map_err(|e| UserDomainError::Internal(e.to_string()))?
                 .with_timezone(&Utc);
             let op = if sort_value == 1 { "$gt" } else { "$lt" };
             filter.insert("created_at", doc! {op: created_at});
@@ -68,7 +68,7 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
         let result = GetUsersResult { users, has_next };
         Ok(result)
     }
-    async fn get_user_by_id(&self, id: &str) -> AppResult<Option<UserReadModel>> {
+    async fn get_user_by_id(&self, id: &str) -> UserDomainResult<Option<UserReadModel>> {
         let doc = self
             .collection
             .find_one(doc! {"_id": id})
@@ -76,7 +76,7 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
             .map(|doc| doc.into());
         Ok(doc)
     }
-    async fn get_user_by_email(&self, email: &str) -> AppResult<Option<UserReadModel>> {
+    async fn get_user_by_email(&self, email: &str) -> UserDomainResult<Option<UserReadModel>> {
         let doc = self
             .collection
             .find_one(doc! {"email": email})
@@ -178,6 +178,8 @@ mod tests {
         use chrono::Duration;
         use shared::guards::roles::UserRole;
 
+        use crate::domain::user::EmailStatus;
+
         use super::*;
 
         pub async fn insert_user(db: Database, user: User) {
@@ -200,6 +202,7 @@ mod tests {
                     None,
                     Utc::now() + Duration::hours(i as i64),
                     vec![],
+                    EmailStatus::Verified,
                 );
                 users.push(user);
             }

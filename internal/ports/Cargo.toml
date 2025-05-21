@@ -8,4 +8,5 @@ async-graphql = "7.0.16"
 user = { path = "../user" }
 shared = { path = "../shared" }
 infra = { path = "../infra" }
+auth = { path = "../auth" }
 mockall = "0.13.1"

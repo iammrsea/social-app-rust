@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
+members = [ "internal/app_error", "internal/auth",
     "internal/content",
     "internal/infra",
     "internal/ports",

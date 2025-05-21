@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use mongodb::{Collection, Database, bson::doc};
-use shared::{errors::user::UserDomainError, types::AppResult};
+use mongodb::{ClientSession, Collection, Database, bson::doc};
 
 use crate::domain::{
-    user::User,
-    user_repository::{F, UserRepository},
+    errors::{UserDomainError, UserDomainResult},
+    user::{EmailStatus, User},
+    user_repository::{F, Ftx, UserRepository},
 };
 
 use super::user_document::UserDocument;
@@ -19,7 +19,7 @@ impl MongoUserRepository {
             collection: db.collection("users"),
         }
     }
-    async fn find_and_update_user(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn find_and_update_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         if let Some(user) = self.collection.find_one(doc! {"_id": user_id }).await? {
             let mut domain_user: User = user.into();
             update_fn(&mut domain_user);
@@ -36,37 +36,37 @@ impl MongoUserRepository {
 
 #[async_trait]
 impl UserRepository for MongoUserRepository {
-    async fn create_account(&self, user: User) -> AppResult<()> {
+    async fn create_account(&self, user: User) -> UserDomainResult<()> {
         let user: UserDocument = user.into();
         self.collection.insert_one(user).await?;
         Ok(())
     }
 
-    async fn make_moderator(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn make_moderator(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn change_username(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn change_username(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn award_badge(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn award_badge(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn revoke_badge(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn revoke_badge(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn ban_user(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn ban_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn unban_user(&self, user_id: &str, update_fn: F) -> AppResult<()> {
+    async fn unban_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn get_user_by_id(&self, user_id: &str) -> AppResult<Option<User>> {
+    async fn get_user_by_id(&self, user_id: &str) -> UserDomainResult<Option<User>> {
         let user = self
             .collection
             .find_one(doc! {"_id": user_id})
@@ -74,16 +74,77 @@ impl UserRepository for MongoUserRepository {
             .map(|doc| doc.into());
         Ok(user)
     }
+    async fn get_user_by_username_or_email(
+        &self,
+        username: &str,
+        email: &str,
+    ) -> UserDomainResult<Option<User>> {
+        let user = self
+            .collection
+            .find_one(doc! {"$or": [{"username": username}, {"email": email}]})
+            .await?
+            .map(|doc| doc.into());
+        Ok(user)
+    }
 
-    async fn user_exists(&self, username: &str, email: &str) -> AppResult<bool> {
-        let filter = doc! {
+    async fn user_exists(
+        &self,
+        username: &str,
+        email: &str,
+        email_status: Option<EmailStatus>,
+    ) -> UserDomainResult<bool> {
+        let mut filter = doc! {
             "$or": [
                 {"email": email},
                 {"username": username}
             ]
         };
+        if let Some(status) = email_status {
+            filter.insert("email_status", status.to_string());
+        }
+        // Check if the user exists in the database
         let user = self.collection.find_one(filter).await?;
         Ok(user.is_some())
+    }
+    async fn upsert_user<'a>(
+        &self,
+        user: User,
+        session: Option<&'a mut ClientSession>,
+    ) -> UserDomainResult<()> {
+        let filter = doc! {
+            "$or": [
+                {"email": user.email()},
+                {"username": user.username()}
+            ]
+        };
+        let user: UserDocument = user.into();
+        let fr = self
+            .collection
+            .find_one_and_replace(filter, user)
+            .upsert(true);
+        if let Some(session) = session {
+            fr.session(session).await?;
+        } else {
+            fr.await?;
+        }
+        Ok(())
+    }
+
+    async fn run_in_transaction(&self, f: Ftx) -> UserDomainResult<()> {
+        let mut session = self.collection.client().start_session().await?;
+        session.start_transaction().await?;
+
+        let result = f(&mut session).await;
+
+        match &result {
+            Ok(_) => {
+                session.commit_transaction().await?;
+            }
+            Err(_) => {
+                session.abort_transaction().await?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -116,7 +177,7 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         let res = user_repo
-            .user_exists(user.username(), user.email())
+            .user_exists(user.username(), user.email(), Some(EmailStatus::Verified))
             .await
             .unwrap();
         assert_eq!(true, res);

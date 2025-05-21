@@ -6,10 +6,12 @@ use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
     guards::permissions::UserPermission,
-    types::AppResult,
 };
 
-use crate::domain::user_repository::UserRepository;
+use crate::domain::{
+    errors::{UserDomainError, UserDomainResult},
+    user_repository::UserRepository,
+};
 use crate::guards::UserGuards;
 
 pub struct RevokeBadge {
@@ -28,8 +30,8 @@ impl RevokeBadgeHandler {
     }
 }
 #[async_trait]
-impl CommandHanlder<RevokeBadge> for RevokeBadgeHandler {
-    async fn handle(&self, ctx: &AppContext, cmd: RevokeBadge) -> AppResult<()> {
+impl CommandHanlder<RevokeBadge, UserDomainError> for RevokeBadgeHandler {
+    async fn handle(&self, ctx: &AppContext, cmd: RevokeBadge) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::RevokeBadge)?;
@@ -47,18 +49,15 @@ impl CommandHanlder<RevokeBadge> for RevokeBadgeHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use crate::app::command::revoke_badge::{RevokeBadge, RevokeBadgeHandler};
+    use super::*;
     use crate::domain::{user::User, user_repository::MockUserRepository};
     use crate::guards::MockUserGuards;
     use mockall::predicate::eq;
-    use shared::command_handler::CommandHanlder;
-    use shared::guards::permissions::UserPermission;
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
     };
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn revoke_badge_success() {
@@ -109,7 +108,7 @@ mod tests {
         mock_guard
             .expect_authorize()
             .with(eq(UserRole::Regular), eq(UserPermission::RevokeBadge))
-            .returning(|_, _| Err(shared::errors::user::UserDomainError::Unauthorized.into()));
+            .returning(|_, _| Err(UserDomainError::Unauthorized));
 
         mock_user_repo.expect_award_badge().never();
 

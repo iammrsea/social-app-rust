@@ -6,8 +6,8 @@ use shared::{
         permissions::{Permission, UserPermission},
         roles::UserRole,
     },
-    types::AppResult,
 };
+use user::domain::errors::{UserDomainError, UserDomainResult};
 
 mod abac;
 mod policy;
@@ -28,11 +28,14 @@ impl GuardsImpl {
 }
 
 impl user::guards::UserGuards for GuardsImpl {
-    fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> AppResult<()> {
+    fn can_change_username(&self, user_id: &str, auth_user: &AuthUser) -> UserDomainResult<()> {
         self.abac.can_change_username(user_id, auth_user)
     }
-    fn authorize(&self, role: &UserRole, perm: &UserPermission) -> AppResult<()> {
+    fn authorize(&self, role: &UserRole, perm: &UserPermission) -> UserDomainResult<()> {
         let internal = Permission::from(perm.clone());
-        self.rbac.authorize(role, &internal)
+        match self.rbac.authorize(role, &internal) {
+            Ok(_) => Ok(()),
+            Err(..) => Err(UserDomainError::Unauthorized),
+        }
     }
 }

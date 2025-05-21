@@ -3,14 +3,14 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
-    errors::user::UserDomainError,
     guards::permissions::UserPermission,
     query_handler::QueryHandler,
-    types::AppResult,
 };
 
 use crate::domain::{
-    user_read_model::UserReadModel, user_read_model_repository::UserReadModelRepository,
+    errors::{UserDomainError, UserDomainResult},
+    user_read_model::UserReadModel,
+    user_read_model_repository::UserReadModelRepository,
 };
 use crate::guards::UserGuards;
 
@@ -29,8 +29,8 @@ impl GetUserByIdHander {
 }
 
 #[async_trait]
-impl QueryHandler<GetUserById, UserReadModel> for GetUserByIdHander {
-    async fn handle(&self, ctx: &AppContext, cmd: GetUserById) -> AppResult<UserReadModel> {
+impl QueryHandler<GetUserById, UserReadModel, UserDomainError> for GetUserByIdHander {
+    async fn handle(&self, ctx: &AppContext, cmd: GetUserById) -> UserDomainResult<UserReadModel> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ViewUser)?;
@@ -44,21 +44,13 @@ impl QueryHandler<GetUserById, UserReadModel> for GetUserByIdHander {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use mockall::predicate::eq;
+    use shared::{auth::AuthUser, guards::roles::UserRole};
     use std::sync::Arc;
 
-    use mockall::predicate::eq;
-    use shared::{
-        auth::{AppContext, AuthUser},
-        guards::{permissions::UserPermission, roles::UserRole},
-        query_handler::QueryHandler,
-    };
-
     use crate::{
-        app::query::user_by_id::{GetUserById, GetUserByIdHander},
-        domain::{
-            user_read_model::UserReadModel, user_read_model_repository::MockUserReadModelRepository,
-        },
-        guards::MockUserGuards,
+        domain::user_read_model_repository::MockUserReadModelRepository, guards::MockUserGuards,
     };
 
     #[tokio::test]

@@ -6,10 +6,13 @@ use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
     guards::permissions::UserPermission,
-    types::AppResult,
 };
 
-use crate::domain::{user::BanType, user_repository::UserRepository};
+use crate::domain::{
+    errors::{UserDomainError, UserDomainResult},
+    user::BanType,
+    user_repository::UserRepository,
+};
 use crate::guards::UserGuards;
 
 pub struct BanUser {
@@ -30,8 +33,8 @@ impl BanUserHandler {
 }
 
 #[async_trait]
-impl CommandHanlder<BanUser> for BanUserHandler {
-    async fn handle(&self, ctx: &AppContext, cmd: BanUser) -> AppResult<()> {
+impl CommandHanlder<BanUser, UserDomainError> for BanUserHandler {
+    async fn handle(&self, ctx: &AppContext, cmd: BanUser) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::BanUser)?;
@@ -49,19 +52,15 @@ impl CommandHanlder<BanUser> for BanUserHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use crate::app::command::ban_user::{BanUser, BanUserHandler};
-    use crate::domain::user::BanType;
+    use super::*;
     use crate::domain::{user::User, user_repository::MockUserRepository};
     use crate::guards::MockUserGuards;
     use mockall::predicate::eq;
-    use shared::command_handler::CommandHanlder;
-    use shared::guards::permissions::UserPermission;
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
     };
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn ban_user_success() {
@@ -104,7 +103,7 @@ mod tests {
         mock_guard
             .expect_authorize()
             .with(eq(UserRole::Regular), eq(UserPermission::BanUser))
-            .returning(|_, _| Err(shared::errors::user::UserDomainError::Unauthorized.into()));
+            .returning(|_, _| Err(UserDomainError::Unauthorized));
 
         mock_user_repo.expect_ban_user().never();
 

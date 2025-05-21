@@ -13,6 +13,20 @@ pub enum BanType {
     Indefinite,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum EmailStatus {
+    Verified,
+    Unverified,
+}
+impl std::fmt::Display for EmailStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EmailStatus::Verified => write!(f, "Verified"),
+            EmailStatus::Unverified => write!(f, "Unverified"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ban {
     is_banned: bool,
@@ -31,6 +45,7 @@ pub struct User {
     ban_status: Option<Ban>,
     updated_at: DateTime<Utc>,
     badges: Vec<String>,
+    email_status: EmailStatus,
 }
 
 impl User {
@@ -44,6 +59,7 @@ impl User {
             ban_status: None,
             updated_at: Utc::now(),
             badges: vec![],
+            email_status: EmailStatus::Unverified,
         }
     }
     pub fn new_with_all_fields(
@@ -55,6 +71,7 @@ impl User {
         ban_status: Option<Ban>,
         updated_at: DateTime<Utc>,
         badges: Vec<String>,
+        email_status: EmailStatus,
     ) -> Self {
         Self {
             id,
@@ -65,6 +82,7 @@ impl User {
             ban_status,
             updated_at,
             badges,
+            email_status,
         }
     }
     pub fn ban(&mut self, reason: String, ban_type: BanType) {
@@ -116,6 +134,7 @@ impl User {
             ban_status: None,
             updated_at: Utc::now(),
             badges: vec![],
+            email_status: EmailStatus::Verified,
         }
     }
     pub fn test_user_id() -> String {
@@ -157,6 +176,9 @@ impl User {
     }
     pub fn is_admin(&self) -> bool {
         self.role == UserRole::Admin
+    }
+    pub fn email_status(&self) -> &EmailStatus {
+        &self.email_status
     }
 }
 

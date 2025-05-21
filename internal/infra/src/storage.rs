@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use auth::otp_respository::OtpRepository;
 use user::domain::{
     user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
 };
@@ -11,6 +12,7 @@ mod mongo_storage;
 pub struct Repos {
     pub user_repo: Arc<dyn UserRepository>,
     pub user_read_repo: Arc<dyn UserReadModelRepository>,
+    pub otp_repo: Box<dyn OtpRepository>,
 }
 
 pub enum StorageEngine {

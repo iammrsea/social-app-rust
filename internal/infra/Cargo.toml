@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 user = { path = "../user" }
 shared = { path = "../shared" }
+auth = { path = "../auth" }
 async-trait = "0.1"
 mongodb = "3.2.3"
 tracing = "0.1"

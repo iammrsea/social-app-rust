@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::user::Ban as BanDomain;
 use crate::domain::user::BanType as BanTypeDomain;
+use crate::domain::user::EmailStatus;
 use crate::domain::user::User;
 use crate::domain::user_read_model::Ban as BanReadModel;
 use crate::domain::user_read_model::BanType as BanTypeReadModel;
@@ -44,6 +45,7 @@ pub struct UserDocument {
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
     pub updated_at: DateTime<Utc>,
     pub ban_status: Option<Ban>,
+    pub email_status: EmailStatus,
 }
 
 impl From<UserDocument> for UserReadModel {
@@ -63,28 +65,6 @@ impl From<UserDocument> for UserReadModel {
                 ban_type: match b.ban_type {
                     BanType::Definite { from, to } => BanTypeReadModel::Definite { from, to },
                     BanType::Indefinite => BanTypeReadModel::Indefinite,
-                },
-            }),
-        }
-    }
-}
-impl Into<UserDocument> for UserReadModel {
-    fn into(self) -> UserDocument {
-        UserDocument {
-            id: self.id,
-            username: self.username,
-            email: self.email,
-            role: self.role,
-            badges: self.badges,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            ban_status: self.ban_status.map(|b| Ban {
-                is_banned: b.is_banned,
-                reason: b.reason,
-                banned_at: b.banned_at,
-                ban_type: match b.ban_type {
-                    BanTypeReadModel::Definite { from, to } => BanType::Definite { from, to },
-                    BanTypeReadModel::Indefinite => BanType::Indefinite,
                 },
             }),
         }
@@ -110,6 +90,7 @@ impl From<UserDocument> for User {
             ban_status,
             value.updated_at,
             value.badges,
+            value.email_status,
         )
     }
 }
@@ -139,6 +120,7 @@ impl Into<UserDocument> for User {
             created_at: truncate_chrono(self.joined_at()),
             updated_at: truncate_chrono(self.updated_at()),
             ban_status,
+            email_status: self.email_status().to_owned(),
         }
     }
 }

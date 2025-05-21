@@ -12,9 +12,12 @@ use ports::{
 };
 use server::graphql::{graphiql, graphql_handler, graphql_playground};
 use shared::config::Config;
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt().init();
+
     let app_service = AppService::build(StorageEngine::MongoDB).await;
 
     let schema = AppSchema::build(Query::default(), Mutation::default(), EmptySubscription)
@@ -28,12 +31,14 @@ async fn main() {
         .with_state(schema);
 
     let config = Config::build();
-    println!("GraphQL API at http//localhost:{}/graphql", config.port);
-    println!(
+
+    info!("GraphQL API at http//localhost:{}/graphql", config.port);
+
+    info!(
         "GraphQL Playground at http//localhost:{}/playground",
         config.port
     );
-    println!("Axum server at http//localhost:{}", config.port);
+    info!("Axum server at http//localhost:{}", config.port);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await

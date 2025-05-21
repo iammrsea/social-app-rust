@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
-use crate::{auth::AppContext, types::AppResult};
+use crate::auth::AppContext;
 
 #[async_trait]
-pub trait CommandHanlder<C>: Sync + Send {
-    async fn handle(&self, ctx: &AppContext, cmd: C) -> AppResult<()>;
+pub trait CommandHanlder<C, E>: Sync + Send {
+    async fn handle(&self, ctx: &AppContext, cmd: C) -> Result<(), E>;
 }

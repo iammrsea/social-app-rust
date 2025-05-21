@@ -5,11 +5,13 @@ use async_trait::async_trait;
 use shared::{
     auth::{AppContext, get_auth_user_from_ctx},
     command_handler::CommandHanlder,
-    errors::user::UserDomainError,
-    types::AppResult,
 };
 
-use crate::domain::user_repository::UserRepository;
+use crate::domain::{
+    errors::{UserDomainError, UserDomainResult},
+    user::EmailStatus,
+    user_repository::UserRepository,
+};
 use crate::guards::UserGuards;
 
 #[derive(Clone)]
@@ -30,13 +32,16 @@ impl ChangeUsernameHandler {
 }
 
 #[async_trait]
-impl CommandHanlder<ChangeUsername> for ChangeUsernameHandler {
-    async fn handle(&self, ctx: &AppContext, cmd: ChangeUsername) -> AppResult<()> {
+impl CommandHanlder<ChangeUsername, UserDomainError> for ChangeUsernameHandler {
+    async fn handle(&self, ctx: &AppContext, cmd: ChangeUsername) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
 
         self.guard.can_change_username(&auth_user.id, &auth_user)?;
 
-        let exists = self.repo.user_exists(&cmd.username, "").await?;
+        let exists = self
+            .repo
+            .user_exists(&cmd.username, "", Some(EmailStatus::Verified))
+            .await?;
 
         if exists {
             return Err(UserDomainError::UsernameTaken.into());
@@ -55,17 +60,16 @@ impl CommandHanlder<ChangeUsername> for ChangeUsernameHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use super::*;
 
-    use crate::app::command::change_username::{ChangeUsername, ChangeUsernameHandler};
     use crate::domain::{user::User, user_repository::MockUserRepository};
     use crate::guards::MockUserGuards;
     use mockall::predicate::eq;
-    use shared::command_handler::CommandHanlder;
     use shared::{
         auth::{AppContext, AuthUser},
         guards::roles::UserRole,
     };
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn change_username_success() {
@@ -89,8 +93,12 @@ mod tests {
 
         mock_user_repo
             .expect_user_exists()
-            .with(eq(expected_username.clone().to_string()), eq(""))
-            .returning(|_, _| Ok(false));
+            .with(
+                eq(expected_username.clone().to_string()),
+                eq(""),
+                eq(Some(EmailStatus::Verified)),
+            )
+            .returning(|_, _, _| Ok(false));
 
         mock_user_repo
             .expect_change_username()
@@ -137,8 +145,12 @@ mod tests {
 
         mock_user_repo
             .expect_user_exists()
-            .with(eq(expected_username.to_string()), eq(""))
-            .returning(|_, _| Ok(true));
+            .with(
+                eq(expected_username.to_string()),
+                eq(""),
+                eq(Some(EmailStatus::Verified)),
+            )
+            .returning(|_, _, _| Ok(true));
 
         mock_user_repo.expect_award_badge().never();
 
