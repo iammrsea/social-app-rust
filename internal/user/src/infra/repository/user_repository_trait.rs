@@ -1,7 +1,7 @@
 use crate::domain::result::UserDomainResult;
 use crate::domain::user::{EmailStatus, User};
 
-use super::db_transactions::{DBTransaction, RepoDB};
+use shared::db_transactions::{DBTransaction, RepoDB};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait::async_trait]

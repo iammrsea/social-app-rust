@@ -1,0 +1,26 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: test-mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    networks:
+      - test-network
+    restart: "no"
+
+  mongo-init:
+    image: mongo:7.0
+    container_name: test-mongo-init
+    depends_on:
+      - mongodb
+    volumes:
+      - ./scripts/init-replica-test.sh:/init-replica-test.sh
+    entrypoint: ["bash", "/init-replica-test.sh"]
+    networks:
+      - test-network
+    restart: "no"
+
+networks:
+  test-network:
+    driver: bridge

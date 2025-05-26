@@ -1,14 +1,11 @@
 use mongodb::{Collection, Database, bson::doc};
 
-use crate::infra::repository::db_transactions::DBTransaction;
-use crate::{
-    domain::{
-        errors::UserDomainError,
-        result::UserDomainResult,
-        user::{EmailStatus, User},
-    },
-    infra::repository::db_transactions::RepoDB,
+use crate::domain::{
+    errors::UserDomainError,
+    result::UserDomainResult,
+    user::{EmailStatus, User},
 };
+use shared::db_transactions::{DBTransaction, RepoDB};
 
 use super::user_document::UserDocument;
 
@@ -23,9 +20,6 @@ impl MongoUserRepository {
             collection: db.collection("users"),
             db,
         }
-    }
-    pub fn collection_name() -> &'static str {
-        "users"
     }
     pub fn get_repo_db(&self) -> RepoDB {
         RepoDB::MongoDb(self.db.clone())
@@ -183,7 +177,7 @@ mod tests {
     use uuid::Uuid;
 
     #[tokio::test]
-    async fn create_account() {
+    async fn test_create_account() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
@@ -193,7 +187,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn user_exists() {
+    async fn test_user_exists() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
 
@@ -209,7 +203,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_user_by_id() {
+    async fn test_get_user_by_id() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
 
@@ -224,7 +218,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn make_moderator() {
+    async fn test_make_moderator() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let mut user = User::new_test_user(None);
@@ -243,7 +237,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ban_user() {
+    async fn test_ban_user() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
@@ -262,7 +256,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn unban_user() {
+    async fn test_unban_user() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
@@ -281,7 +275,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn award_badge() {
+    async fn test_award_badge() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
@@ -300,7 +294,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn revoke_badge() {
+    async fn test_revoke_badge() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let mut user = User::new_test_user(None);
@@ -322,7 +316,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn change_username() {
+    async fn test_change_username() {
         let client = test_utils::setup_test_mongo().await;
         let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
         let user = User::new_test_user(None);
@@ -342,6 +336,61 @@ mod tests {
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;
         assert_eq!(expected_username.to_string(), user_from_db.username);
+    }
+
+    #[tokio::test]
+    async fn test_upsert_user() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+        let user = User::new_test_user(None);
+
+        let user_repo = MongoUserRepository::new(db.clone());
+        user_repo.upsert_user(user.clone(), None).await.unwrap();
+        assert_user_in_db_equals(user.clone(), db.clone()).await;
+
+        // Update the user
+        let mut updated_user = user.clone();
+        updated_user.change_username("updated_username".to_string());
+        user_repo
+            .upsert_user(updated_user.clone(), None)
+            .await
+            .unwrap();
+        assert_user_in_db_equals(updated_user, db).await;
+    }
+
+    #[tokio::test]
+    async fn test_upsert_user_in_transaction() {
+        let client = test_utils::setup_test_mongo().await;
+        let db = client.database(&format!("test_db-{}", Uuid::new_v4().to_string()));
+
+        let user_repo = MongoUserRepository::new(db.clone());
+        let repo_db = user_repo.get_repo_db();
+        match repo_db {
+            RepoDB::MongoDb(db) => {
+                let user = User::new_test_user(None);
+                let mut session = db.client().start_session().await.unwrap();
+                session.start_transaction().await.unwrap();
+                user_repo
+                    .upsert_user(user.clone(), Some(DBTransaction::MongoDb(&mut session)))
+                    .await
+                    .unwrap();
+
+                // Assert that the user is not in the database yet before committing the transaction
+                let res = user_repo
+                    .collection
+                    .find_one(doc! {"_id": user.id()})
+                    .await
+                    .unwrap();
+                assert!(res.is_none());
+
+                // Commit the transaction
+                session.commit_transaction().await.unwrap();
+
+                // Assert that the user is in the database after committing the transaction
+                assert_user_in_db_equals(user.clone(), db).await;
+            }
+            _ => panic!("Expected MongoDB transaction"),
+        }
     }
 
     mod utils {

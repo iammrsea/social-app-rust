@@ -9,16 +9,13 @@ use validator::Validate;
 
 use shared::{auth::AppContext, command_handler::CommandHanlder, guards::roles::UserRole};
 
-use crate::infra::repository::db_transactions::RepoDB;
-use crate::infra::repository::user_repository::UserRepository;
-use crate::{
-    domain::{
-        errors::UserDomainError,
-        result::UserDomainResult,
-        user::{EmailStatus, User},
-    },
-    infra::repository::db_transactions::DBTransaction,
+use crate::domain::{
+    errors::UserDomainError,
+    result::UserDomainResult,
+    user::{EmailStatus, User},
 };
+use crate::infra::repository::user_repository::UserRepository;
+use shared::db_transactions::{DBTransaction, RepoDB};
 
 #[derive(Debug, Clone, Validate, Deserialize, InputObject)]
 pub struct CreateAccount {

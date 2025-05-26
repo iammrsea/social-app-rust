@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod command_handler;
 pub mod config;
+pub mod db_transactions;
 pub mod errors;
 pub mod guards;
 pub mod pagination;

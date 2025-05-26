@@ -3,7 +3,7 @@ use crate::infra::mongoimpl::user_repository::MongoUserRepository;
 use crate::domain::result::UserDomainResult;
 use crate::domain::user::{EmailStatus, User};
 
-use super::db_transactions::{DBTransaction, RepoDB};
+use shared::db_transactions::{DBTransaction, RepoDB};
 
 #[cfg(test)]
 use super::user_repository_trait::UserRepositoryTrait;

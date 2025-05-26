@@ -2,38 +2,34 @@
 set -euo pipefail
 
 # Settings
-MONGO_VERSION=7
-CONTAINER_NAME=test-mongo
+COMPOSE_FILE="docker-compose-test.yml"
 MONGO_PORT=27017
 
 # Start MongoDB container
 echo "Starting MongoDB container..."
-docker run -d --name $CONTAINER_NAME -p $MONGO_PORT:27017  mongo:$MONGO_VERSION
-
+docker-compose -f "$COMPOSE_FILE" up -d
+echo "MongoDB container started."
 
 # Define cleanup function
 cleanup() {
     echo "Stopping Mongo container..."
-    docker stop "$CONTAINER_NAME" >/dev/null
-    docker rm "$CONTAINER_NAME" >/dev/null
+    # docker stop "$CONTAINER_NAME" >/dev/null
+    # docker rm "$CONTAINER_NAME" >/dev/null
+    docker-compose -f "$COMPOSE_FILE" down
     echo "Mongo container stopped and removed."
 }
 
 # Trap script exit and run cleanup
 trap cleanup EXIT
 
-# Wait for MongoDB to be ready
-echo "Waiting for MongoDB to be ready..."
-until docker exec "$CONTAINER_NAME" mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+# Wait for mongo-init to finish (replica set ready)
+echo "Waiting for replica set initialization to complete..."
+until [ "$(docker inspect -f '{{.State.Status}}' test-mongo-init 2>/dev/null)" = "exited" ]; do
   sleep 1
 done
 
-echo "✅ MongoDB is ready."
-
-
-
 # Export MONGO_URI
-export MONGO_URI="mongodb://localhost:$MONGO_PORT"
+export MONGO_URI="mongodb://localhost:$MONGO_PORT/?replicaSet=rs0"
 
 # Run tests with cargo nextest
 echo "Running tests with cargo nextest..."
