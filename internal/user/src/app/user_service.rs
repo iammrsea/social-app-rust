@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use auth::repository::OtpRepository;
+
 use crate::guards::UserGuards;
 
-use crate::domain::{
+use crate::infra::repository::{
     user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
 };
 
@@ -25,13 +27,14 @@ pub struct UserService {
 
 impl UserService {
     pub fn new(
-        user_repo: Arc<dyn UserRepository>,
-        user_read_repo: Arc<dyn UserReadModelRepository>,
+        user_repo: Arc<UserRepository>,
+        user_read_repo: Arc<UserReadModelRepository>,
         guard: Arc<dyn UserGuards>,
+        otp_repo: OtpRepository,
     ) -> Self {
         Self {
             command_handler: CommandHandler {
-                create_account: CreateAccountHandler::new(user_repo.clone(), guard.clone()),
+                create_account: CreateAccountHandler::new(user_repo.clone(), otp_repo),
                 award_badge: AwardBadgeHandler::new(user_repo.clone(), guard.clone()),
                 revoke_badge: RevokeBadgeHandler::new(user_repo.clone(), guard.clone()),
                 make_moderator: MakeModeratorHandler::new(user_repo.clone(), guard.clone()),

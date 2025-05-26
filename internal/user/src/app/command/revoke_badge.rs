@@ -8,10 +8,10 @@ use shared::{
     guards::permissions::UserPermission,
 };
 
-use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user_repository::UserRepository,
-};
+use crate::domain::errors::UserDomainError;
+use crate::domain::result::UserDomainResult;
+use crate::infra::repository::user_repository::UserRepository;
+
 use crate::guards::UserGuards;
 
 pub struct RevokeBadge {
@@ -20,13 +20,13 @@ pub struct RevokeBadge {
 }
 
 pub struct RevokeBadgeHandler {
-    repo: Arc<dyn UserRepository>,
+    user_repo: Arc<UserRepository>,
     guard: Arc<dyn UserGuards>,
 }
 
 impl RevokeBadgeHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
-        Self { repo, guard }
+    pub fn new(user_repo: Arc<UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
+        Self { user_repo, guard }
     }
 }
 #[async_trait]
@@ -35,13 +35,10 @@ impl CommandHanlder<RevokeBadge, UserDomainError> for RevokeBadgeHandler {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::RevokeBadge)?;
-        self.repo
-            .revoke_badge(
-                &cmd.user_id,
-                Box::new(|user| {
-                    user.revoke_badge(cmd.badge);
-                }),
-            )
+        self.user_repo
+            .revoke_badge(&cmd.user_id, |user| {
+                user.revoke_badge(cmd.badge);
+            })
             .await?;
         Ok(())
     }
@@ -50,8 +47,9 @@ impl CommandHanlder<RevokeBadge, UserDomainError> for RevokeBadgeHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{user::User, user_repository::MockUserRepository};
+    use crate::domain::user::User;
     use crate::guards::MockUserGuards;
+    use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::eq;
     use shared::{
         auth::{AppContext, AuthUser},
@@ -61,7 +59,7 @@ mod tests {
 
     #[tokio::test]
     async fn revoke_badge_success() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         let badge = "Helpful".to_string();
@@ -88,7 +86,10 @@ mod tests {
                 );
                 Ok(())
             });
-        let handler = RevokeBadgeHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = RevokeBadgeHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = RevokeBadge {
             user_id: User::test_user_id(),
             badge,
@@ -102,7 +103,7 @@ mod tests {
 
     #[tokio::test]
     async fn revoke_badge_unauthorized() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
         let badge = "Helpful".to_string();
         mock_guard
@@ -112,7 +113,10 @@ mod tests {
 
         mock_user_repo.expect_award_badge().never();
 
-        let handler = RevokeBadgeHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = RevokeBadgeHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = RevokeBadge {
             user_id: User::test_user_id(),
             badge,

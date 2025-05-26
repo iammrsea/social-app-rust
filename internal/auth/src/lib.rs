@@ -4,7 +4,5 @@ pub mod errors;
 pub mod jwt;
 mod magic_link;
 mod otp;
-
-pub use otp::{mongoimpl, otp_respository};
-
-pub type AuthResult<T> = std::result::Result<T, errors::AuthError>;
+pub mod result;
+pub use otp::{mongoimpl, repository};

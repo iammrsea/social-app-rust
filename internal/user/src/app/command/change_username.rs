@@ -7,12 +7,9 @@ use shared::{
     command_handler::CommandHanlder,
 };
 
-use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user::EmailStatus,
-    user_repository::UserRepository,
-};
+use crate::domain::{errors::UserDomainError, result::UserDomainResult, user::EmailStatus};
 use crate::guards::UserGuards;
+use crate::infra::repository::user_repository::UserRepository;
 
 #[derive(Clone)]
 pub struct ChangeUsername {
@@ -21,13 +18,13 @@ pub struct ChangeUsername {
 }
 
 pub struct ChangeUsernameHandler {
-    repo: Arc<dyn UserRepository>,
+    user_repo: Arc<UserRepository>,
     guard: Arc<dyn UserGuards>,
 }
 
 impl ChangeUsernameHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
-        Self { repo, guard }
+    pub fn new(user_repo: Arc<UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
+        Self { user_repo, guard }
     }
 }
 
@@ -39,20 +36,17 @@ impl CommandHanlder<ChangeUsername, UserDomainError> for ChangeUsernameHandler {
         self.guard.can_change_username(&auth_user.id, &auth_user)?;
 
         let exists = self
-            .repo
+            .user_repo
             .user_exists(&cmd.username, "", Some(EmailStatus::Verified))
             .await?;
 
         if exists {
             return Err(UserDomainError::UsernameTaken.into());
         }
-        self.repo
-            .change_username(
-                &cmd.user_id,
-                Box::new(|user| {
-                    user.change_username(cmd.username);
-                }),
-            )
+        self.user_repo
+            .change_username(&cmd.user_id, |user| {
+                user.change_username(cmd.username);
+            })
             .await?;
         Ok(())
     }
@@ -62,8 +56,9 @@ impl CommandHanlder<ChangeUsername, UserDomainError> for ChangeUsernameHandler {
 mod tests {
     use super::*;
 
-    use crate::domain::{user::User, user_repository::MockUserRepository};
+    use crate::domain::user::User;
     use crate::guards::MockUserGuards;
+    use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::eq;
     use shared::{
         auth::{AppContext, AuthUser},
@@ -73,7 +68,7 @@ mod tests {
 
     #[tokio::test]
     async fn change_username_success() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         let auth_user = AuthUser::new_test_auth_user(UserRole::Regular);
@@ -115,7 +110,10 @@ mod tests {
                 );
                 Ok(())
             });
-        let handler = ChangeUsernameHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = ChangeUsernameHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
 
         let ctx = AppContext::new().with_user(auth_user);
 
@@ -125,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn change_username_failed_username_taken() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         let auth_user = AuthUser::new_test_auth_user(UserRole::Regular);
@@ -154,7 +152,10 @@ mod tests {
 
         mock_user_repo.expect_award_badge().never();
 
-        let handler = ChangeUsernameHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = ChangeUsernameHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
 
         let ctx = AppContext::new().with_user(auth_user);
         let result = handler.handle(&ctx, cmd).await;

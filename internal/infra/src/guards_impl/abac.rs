@@ -1,4 +1,4 @@
-use ::user::domain::errors::UserDomainResult;
+use ::user::domain::result::UserDomainResult;
 use shared::auth::AuthUser;
 
 pub struct AbacEngine;
@@ -15,7 +15,7 @@ impl AbacEngine {
 pub mod user {
     use shared::auth::AuthUser;
     use shared::guards::roles::UserRole::{Admin, Guest, Moderator, Regular};
-    use user::domain::errors::{UserDomainError, UserDomainResult};
+    use user::domain::{errors::UserDomainError, result::UserDomainResult};
 
     pub fn can_change_username(user_id: &str, auth_user: &AuthUser) -> UserDomainResult<()> {
         match auth_user.role {

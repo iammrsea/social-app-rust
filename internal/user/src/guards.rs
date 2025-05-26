@@ -1,4 +1,4 @@
-use crate::domain::errors::UserDomainResult;
+use crate::domain::result::UserDomainResult;
 use shared::{
     auth::AuthUser,
     guards::{permissions::UserPermission, roles::UserRole},

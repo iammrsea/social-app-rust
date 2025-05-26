@@ -7,7 +7,7 @@ use shared::{
         roles::UserRole,
     },
 };
-use user::domain::errors::{UserDomainError, UserDomainResult};
+use user::domain::{errors::UserDomainError, result::UserDomainResult};
 
 mod abac;
 mod policy;

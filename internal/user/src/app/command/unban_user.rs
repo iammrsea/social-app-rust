@@ -8,24 +8,23 @@ use shared::{
     guards::permissions::UserPermission,
 };
 
-use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user_repository::UserRepository,
-};
+use crate::domain::errors::UserDomainError;
+use crate::domain::result::UserDomainResult;
 use crate::guards::UserGuards;
+use crate::infra::repository::user_repository::UserRepository;
 
 pub struct UnbanUser {
     pub user_id: String,
 }
 
 pub struct UnbanUserHandler {
-    repo: Arc<dyn UserRepository>,
+    user_repo: Arc<UserRepository>,
     guard: Arc<dyn UserGuards>,
 }
 
 impl UnbanUserHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
-        Self { repo, guard }
+    pub fn new(user_repo: Arc<UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
+        Self { user_repo, guard }
     }
 }
 
@@ -35,13 +34,10 @@ impl CommandHanlder<UnbanUser, UserDomainError> for UnbanUserHandler {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::UnbanUser)?;
-        self.repo
-            .unban_user(
-                &cmd.user_id,
-                Box::new(|user| {
-                    user.unban();
-                }),
-            )
+        self.user_repo
+            .unban_user(&cmd.user_id, |user| {
+                user.unban();
+            })
             .await?;
         Ok(())
     }
@@ -52,8 +48,9 @@ mod tests {
     use super::*;
 
     use crate::domain::user::BanType;
-    use crate::domain::{user::User, user_repository::MockUserRepository};
+    use crate::domain::user::User;
     use crate::guards::MockUserGuards;
+    use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::eq;
 
     use shared::{
@@ -64,7 +61,7 @@ mod tests {
 
     #[tokio::test]
     async fn unban_user_success() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         mock_guard
@@ -83,7 +80,10 @@ mod tests {
                 assert_eq!(None, user.ban_status(), "expected user not to be banned",);
                 Ok(())
             });
-        let handler = UnbanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = UnbanUserHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = UnbanUser {
             user_id: User::test_user_id(),
         };
@@ -96,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn unban_user_unauthorized() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         mock_guard
@@ -106,7 +106,10 @@ mod tests {
 
         mock_user_repo.expect_unban_user().never();
 
-        let handler = UnbanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = UnbanUserHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = UnbanUser {
             user_id: User::test_user_id(),
         };

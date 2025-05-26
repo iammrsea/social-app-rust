@@ -8,8 +8,12 @@ use shared::types::AppResult;
 use std::sync::Arc;
 
 use auth::mongoimpl::MongoOtpRepository;
+use auth::repository::OtpRepository;
 use user::infra::mongoimpl::{
     user_read_model_repository::MongoUserReadModelRepository, user_repository::MongoUserRepository,
+};
+use user::infra::repository::{
+    user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
 };
 
 use super::*;
@@ -20,7 +24,7 @@ pub struct MongoDBStorage {
 }
 
 impl MongoDBStorage {
-    pub async fn new() -> Box<dyn StorageSources> {
+    pub async fn new() -> Self {
         let cfg = Config::build();
         let mongo_cfg = cfg.build_mongodb_config();
         info!("Connecting to MongoDB...");
@@ -29,20 +33,21 @@ impl MongoDBStorage {
             .expect("Unable to contect to MongoDB");
 
         info!("✅ Connected to MongoDB");
-        Box::new(Self {
+        Self {
             client,
             cfg: mongo_cfg,
-        })
+        }
     }
-}
-
-impl StorageSources for MongoDBStorage {
-    fn repos(&self) -> Repos {
+    pub fn repos(&self) -> Repos {
         let db = self.client.database(&self.cfg.database_name);
         Repos {
-            user_repo: Arc::new(MongoUserRepository::new(db.clone())),
-            user_read_repo: Arc::new(MongoUserReadModelRepository::new(db.clone())),
-            otp_repo: Box::new(MongoOtpRepository::new(db.clone())),
+            user_repo: Arc::new(UserRepository::MongoDb(MongoUserRepository::new(
+                db.clone(),
+            ))),
+            user_read_repo: Arc::new(UserReadModelRepository::MongoDb(
+                MongoUserReadModelRepository::new(db.clone()),
+            )),
+            otp_repo: OtpRepository::MongoDb(MongoOtpRepository::new(db.clone())),
         }
     }
 }

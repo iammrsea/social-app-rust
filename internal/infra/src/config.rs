@@ -109,7 +109,7 @@ mod utils {
         T: IsAllowedNum + FromStr,
         <T as FromStr>::Err: Debug,
     {
-        let fallback: String = fallback.into();
+        let fallback = fallback.to_string();
         let value = var(name).map_or(
             fallback.clone(),
             |v| if v.len() == 0 { fallback } else { v },

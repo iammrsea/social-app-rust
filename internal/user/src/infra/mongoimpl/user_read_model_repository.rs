@@ -1,15 +1,12 @@
-use async_trait::async_trait;
 use bson::{Document, doc};
 use chrono::{DateTime, Utc};
 use futures::stream::StreamExt;
 use mongodb::{Collection, Database, options::FindOptions};
 
 use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user_read_model::UserReadModel,
-    user_read_model_repository::{
-        GetUsersOptions, GetUsersResult, SortDirection, UserReadModelRepository,
-    },
+    errors::UserDomainError,
+    result::UserDomainResult,
+    user_read_model::{GetUsersOptions, GetUsersResult, SortDirection, UserReadModel},
 };
 
 use super::user_document::UserDocument;
@@ -24,11 +21,7 @@ impl MongoUserReadModelRepository {
             collection: db.collection("users"),
         }
     }
-}
-
-#[async_trait]
-impl UserReadModelRepository for MongoUserReadModelRepository {
-    async fn get_users(&self, opts: &GetUsersOptions) -> UserDomainResult<GetUsersResult> {
+    pub async fn get_users(&self, opts: &GetUsersOptions) -> UserDomainResult<GetUsersResult> {
         let mut find_options = FindOptions::default();
         find_options.limit = Some((opts.first + 1) as i64);
 
@@ -68,7 +61,7 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
         let result = GetUsersResult { users, has_next };
         Ok(result)
     }
-    async fn get_user_by_id(&self, id: &str) -> UserDomainResult<Option<UserReadModel>> {
+    pub async fn get_user_by_id(&self, id: &str) -> UserDomainResult<Option<UserReadModel>> {
         let doc = self
             .collection
             .find_one(doc! {"_id": id})
@@ -76,7 +69,7 @@ impl UserReadModelRepository for MongoUserReadModelRepository {
             .map(|doc| doc.into());
         Ok(doc)
     }
-    async fn get_user_by_email(&self, email: &str) -> UserDomainResult<Option<UserReadModel>> {
+    pub async fn get_user_by_email(&self, email: &str) -> UserDomainResult<Option<UserReadModel>> {
         let doc = self
             .collection
             .find_one(doc! {"email": email})

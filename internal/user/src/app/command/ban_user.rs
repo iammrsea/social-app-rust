@@ -8,11 +8,9 @@ use shared::{
     guards::permissions::UserPermission,
 };
 
-use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user::BanType,
-    user_repository::UserRepository,
-};
+use crate::domain::{errors::UserDomainError, result::UserDomainResult, user::BanType};
+use crate::infra::repository::user_repository::UserRepository;
+
 use crate::guards::UserGuards;
 
 pub struct BanUser {
@@ -22,13 +20,13 @@ pub struct BanUser {
 }
 
 pub struct BanUserHandler {
-    repo: Arc<dyn UserRepository>,
+    user_repo: Arc<UserRepository>,
     guard: Arc<dyn UserGuards>,
 }
 
 impl BanUserHandler {
-    pub fn new(repo: Arc<dyn UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
-        Self { repo, guard }
+    pub fn new(user_repo: Arc<UserRepository>, guard: Arc<dyn UserGuards>) -> Self {
+        Self { user_repo, guard }
     }
 }
 
@@ -38,13 +36,10 @@ impl CommandHanlder<BanUser, UserDomainError> for BanUserHandler {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::BanUser)?;
-        self.repo
-            .ban_user(
-                &cmd.user_id,
-                Box::new(|user| {
-                    user.ban(cmd.reason, cmd.ban_type);
-                }),
-            )
+        self.user_repo
+            .ban_user(&cmd.user_id, |user| {
+                user.ban(cmd.reason, cmd.ban_type);
+            })
             .await?;
         Ok(())
     }
@@ -53,8 +48,9 @@ impl CommandHanlder<BanUser, UserDomainError> for BanUserHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{user::User, user_repository::MockUserRepository};
+    use crate::domain::user::User;
     use crate::guards::MockUserGuards;
+    use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::eq;
     use shared::{
         auth::{AppContext, AuthUser},
@@ -64,7 +60,7 @@ mod tests {
 
     #[tokio::test]
     async fn ban_user_success() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         mock_guard
@@ -82,7 +78,10 @@ mod tests {
                 assert_eq!(true, ban_status.is_banned(), "expected user to be banned",);
                 Ok(())
             });
-        let handler = BanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = BanUserHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = BanUser {
             user_id: User::test_user_id(),
             reason: "Abuse".into(),
@@ -97,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn ban_user_unauthorized() {
-        let mut mock_user_repo = MockUserRepository::new();
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         mock_guard
@@ -107,7 +106,10 @@ mod tests {
 
         mock_user_repo.expect_ban_user().never();
 
-        let handler = BanUserHandler::new(Arc::new(mock_user_repo), Arc::new(mock_guard));
+        let handler = BanUserHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(mock_guard),
+        );
         let cmd = BanUser {
             user_id: User::test_user_id(),
             reason: "Abuse".into(),

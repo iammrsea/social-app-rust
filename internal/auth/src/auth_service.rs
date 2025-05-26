@@ -1,11 +1,12 @@
 use crate::{
-    AuthResult, auth_utils,
+    auth_utils,
     errors::AuthError,
     otp::{
         OtpEntry,
         otp_respository::OtpRepository,
         utils::{compare_otps, generate_otp, get_otp_expiration, hash_otp},
     },
+    result::AuthResult,
 };
 
 pub struct AuthService {

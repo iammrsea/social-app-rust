@@ -13,6 +13,8 @@ pub enum UserDomainError {
     Database(String),
     Validation(String),
     Internal(String),
+    InvalidTransaction,
+    TransactionFailed,
 }
 
 impl fmt::Display for UserDomainError {
@@ -27,6 +29,8 @@ impl fmt::Display for UserDomainError {
             Self::Database(msg) => write!(f, "{}", msg),
             Self::Validation(msg) => write!(f, "{}", msg),
             Self::Internal(msg) => write!(f, "{}", msg),
+            Self::InvalidTransaction => write!(f, "Invalid transaction"),
+            Self::TransactionFailed => write!(f, "Transaction failed"),
         }
     }
 }
@@ -42,7 +46,7 @@ impl From<AuthError> for UserDomainError {
 impl From<mongodb::error::Error> for UserDomainError {
     fn from(err: mongodb::error::Error) -> Self {
         error!("Mongodb Error: {:#?}", err);
-        Self::Database(err.to_string())
+        Self::Database(err.to_string()) // TODO: Return a generic database error instead of the specific error
     }
 }
 
@@ -53,5 +57,3 @@ impl From<validator::ValidationErrors> for UserDomainError {
         Self::Validation(json)
     }
 }
-
-pub type UserDomainResult<T> = Result<T, UserDomainError>;

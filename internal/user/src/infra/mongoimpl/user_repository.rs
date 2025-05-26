@@ -1,25 +1,40 @@
-use async_trait::async_trait;
-use mongodb::{ClientSession, Collection, Database, bson::doc};
+use mongodb::{Collection, Database, bson::doc};
 
-use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user::{EmailStatus, User},
-    user_repository::{F, Ftx, UserRepository},
+use crate::infra::repository::db_transactions::DBTransaction;
+use crate::{
+    domain::{
+        errors::UserDomainError,
+        result::UserDomainResult,
+        user::{EmailStatus, User},
+    },
+    infra::repository::db_transactions::RepoDB,
 };
 
 use super::user_document::UserDocument;
 
 pub struct MongoUserRepository {
     collection: Collection<UserDocument>,
+    db: Database,
 }
 
 impl MongoUserRepository {
     pub fn new(db: Database) -> Self {
         Self {
             collection: db.collection("users"),
+            db,
         }
     }
-    async fn find_and_update_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub fn collection_name() -> &'static str {
+        "users"
+    }
+    pub fn get_repo_db(&self) -> RepoDB {
+        RepoDB::MongoDb(self.db.clone())
+    }
+    async fn find_and_update_user<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         if let Some(user) = self.collection.find_one(doc! {"_id": user_id }).await? {
             let mut domain_user: User = user.into();
             update_fn(&mut domain_user);
@@ -32,41 +47,61 @@ impl MongoUserRepository {
             Err(UserDomainError::UserNotFound.into())
         }
     }
-}
-
-#[async_trait]
-impl UserRepository for MongoUserRepository {
-    async fn create_account(&self, user: User) -> UserDomainResult<()> {
+    pub async fn create_account(&self, user: User) -> UserDomainResult<()> {
         let user: UserDocument = user.into();
         self.collection.insert_one(user).await?;
         Ok(())
     }
 
-    async fn make_moderator(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn make_moderator<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn change_username(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn change_username<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn award_badge(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn award_badge<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn revoke_badge(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn revoke_badge<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn ban_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn ban_user<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn unban_user(&self, user_id: &str, update_fn: F) -> UserDomainResult<()> {
+    pub async fn unban_user<F: FnOnce(&mut User) + Send>(
+        &self,
+        user_id: &str,
+        update_fn: F,
+    ) -> UserDomainResult<()> {
         self.find_and_update_user(user_id, update_fn).await
     }
 
-    async fn get_user_by_id(&self, user_id: &str) -> UserDomainResult<Option<User>> {
+    pub async fn get_user_by_id(&self, user_id: &str) -> UserDomainResult<Option<User>> {
         let user = self
             .collection
             .find_one(doc! {"_id": user_id})
@@ -74,7 +109,7 @@ impl UserRepository for MongoUserRepository {
             .map(|doc| doc.into());
         Ok(user)
     }
-    async fn get_user_by_username_or_email(
+    pub async fn get_user_by_username_or_email(
         &self,
         username: &str,
         email: &str,
@@ -87,7 +122,7 @@ impl UserRepository for MongoUserRepository {
         Ok(user)
     }
 
-    async fn user_exists(
+    pub async fn user_exists(
         &self,
         username: &str,
         email: &str,
@@ -106,10 +141,10 @@ impl UserRepository for MongoUserRepository {
         let user = self.collection.find_one(filter).await?;
         Ok(user.is_some())
     }
-    async fn upsert_user<'a>(
+    pub async fn upsert_user<'a>(
         &self,
         user: User,
-        session: Option<&'a mut ClientSession>,
+        tx: Option<DBTransaction<'a>>,
     ) -> UserDomainResult<()> {
         let filter = doc! {
             "$or": [
@@ -122,27 +157,17 @@ impl UserRepository for MongoUserRepository {
             .collection
             .find_one_and_replace(filter, user)
             .upsert(true);
-        if let Some(session) = session {
-            fr.session(session).await?;
+        if let Some(tx) = tx {
+            match tx {
+                DBTransaction::MongoDb(s) => {
+                    fr.session(s).await?;
+                }
+                _ => {
+                    return Err(UserDomainError::InvalidTransaction);
+                }
+            }
         } else {
             fr.await?;
-        }
-        Ok(())
-    }
-
-    async fn run_in_transaction(&self, f: Ftx) -> UserDomainResult<()> {
-        let mut session = self.collection.client().start_session().await?;
-        session.start_transaction().await?;
-
-        let result = f(&mut session).await;
-
-        match &result {
-            Ok(_) => {
-                session.commit_transaction().await?;
-            }
-            Err(_) => {
-                session.abort_transaction().await?;
-            }
         }
         Ok(())
     }
@@ -208,12 +233,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .make_moderator(
-                user.id(),
-                Box::new(|u| {
-                    u.make_moderator();
-                }),
-            )
+            .make_moderator(user.id(), |u| {
+                u.make_moderator();
+            })
             .await
             .unwrap();
         user.make_moderator();
@@ -230,12 +252,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .ban_user(
-                user.id(),
-                Box::new(|u| {
-                    u.ban("abuse".into(), BanType::Indefinite);
-                }),
-            )
+            .ban_user(user.id(), |u| {
+                u.ban("abuse".into(), BanType::Indefinite);
+            })
             .await
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;
@@ -252,12 +271,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .unban_user(
-                user.id(),
-                Box::new(|u| {
-                    u.unban();
-                }),
-            )
+            .unban_user(user.id(), |u| {
+                u.unban();
+            })
             .await
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;
@@ -274,12 +290,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .award_badge(
-                user.id(),
-                Box::new(|u| {
-                    u.award_badge("Helpful".into());
-                }),
-            )
+            .award_badge(user.id(), |u| {
+                u.award_badge("Helpful".into());
+            })
             .await
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;
@@ -299,12 +312,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .revoke_badge(
-                user.id(),
-                Box::new(|u| {
-                    u.revoke_badge(badge);
-                }),
-            )
+            .revoke_badge(user.id(), |u| {
+                u.revoke_badge(badge);
+            })
             .await
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;
@@ -325,12 +335,9 @@ mod tests {
 
         let user_repo = MongoUserRepository::new(db.clone());
         user_repo
-            .change_username(
-                user.id(),
-                Box::new(|u| {
-                    u.change_username(username);
-                }),
-            )
+            .change_username(user.id(), |u| {
+                u.change_username(username);
+            })
             .await
             .unwrap();
         let user_from_db = get_user_from_db(db.clone(), user.id()).await;

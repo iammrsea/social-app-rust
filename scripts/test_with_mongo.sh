@@ -28,6 +28,10 @@ until docker exec "$CONTAINER_NAME" mongosh --eval "db.adminCommand('ping')" >/d
   sleep 1
 done
 
+echo "✅ MongoDB is ready."
+
+
+
 # Export MONGO_URI
 export MONGO_URI="mongodb://localhost:$MONGO_PORT"
 

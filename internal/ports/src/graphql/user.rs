@@ -12,7 +12,7 @@ use user::{
         command::create_account::CreateAccount,
         query::{user_by_email::GetUserByEmail, user_by_id::GetUserById},
     },
-    domain::errors::UserDomainResult,
+    domain::result::UserDomainResult,
 };
 
 #[derive(Default, Debug)]

@@ -9,22 +9,23 @@ use shared::{
 };
 
 use crate::domain::{
-    errors::{UserDomainError, UserDomainResult},
-    user_read_model::UserReadModel,
-    user_read_model_repository::{GetUsersOptions, UserReadModelRepository},
+    errors::UserDomainError,
+    result::UserDomainResult,
+    user_read_model::{GetUsersOptions, UserReadModel},
 };
 use crate::guards::UserGuards;
+use crate::infra::repository::user_read_model_repository::UserReadModelRepository;
 
 type Result = PaginatedQueryResult<UserReadModel>;
 
 pub struct GetUsersHandler {
-    repo: Arc<dyn UserReadModelRepository>,
+    user_repo: Arc<UserReadModelRepository>,
     guard: Arc<dyn UserGuards>,
 }
 
 impl GetUsersHandler {
-    pub fn new(repo: Arc<dyn UserReadModelRepository>, guard: Arc<dyn UserGuards>) -> Self {
-        Self { repo, guard }
+    pub fn new(user_repo: Arc<UserReadModelRepository>, guard: Arc<dyn UserGuards>) -> Self {
+        Self { user_repo, guard }
     }
 }
 
@@ -34,7 +35,7 @@ impl QueryHandler<GetUsersOptions, Result, UserDomainError> for GetUsersHandler 
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
             .authorize(&auth_user.role, &UserPermission::ListUsers)?;
-        let resp = self.repo.get_users(&cmd).await?;
+        let resp = self.user_repo.get_users(&cmd).await?;
         let result = Result {
             data: resp.users,
             pagination_info: PaginationInfo {
@@ -52,15 +53,14 @@ mod tests {
     use shared::{auth::AuthUser, guards::roles::UserRole};
 
     use crate::{
-        domain::user_read_model_repository::{
-            GetUsersResult, MockUserReadModelRepository, SortDirection,
-        },
+        domain::user_read_model::{GetUsersResult, SortDirection},
         guards::MockUserGuards,
+        infra::repository::user_read_model_repository_trait::MockUserReadModelRepositoryTrait,
     };
 
     #[tokio::test]
     async fn get_users_success() {
-        let mut mock_user_read_repo = MockUserReadModelRepository::new();
+        let mut mock_user_read_repo = MockUserReadModelRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = GetUsersOptions {
@@ -86,7 +86,10 @@ mod tests {
                     users,
                 })
             });
-        let handler = GetUsersHandler::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
+        let handler = GetUsersHandler::new(
+            Arc::new(UserReadModelRepository::Mock(mock_user_read_repo)),
+            Arc::new(mock_guard),
+        );
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Moderator));
 
         let result = handler.handle(&ctx, cmd).await;
@@ -95,7 +98,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_users_unauthorized() {
-        let mut mock_user_read_repo = MockUserReadModelRepository::new();
+        let mut mock_user_read_repo = MockUserReadModelRepositoryTrait::new();
         let mut mock_guard = MockUserGuards::new();
 
         let cmd = GetUsersOptions {
@@ -111,7 +114,10 @@ mod tests {
 
         mock_user_read_repo.expect_get_users().never();
 
-        let handler = GetUsersHandler::new(Arc::new(mock_user_read_repo), Arc::new(mock_guard));
+        let handler = GetUsersHandler::new(
+            Arc::new(UserReadModelRepository::Mock(mock_user_read_repo)),
+            Arc::new(mock_guard),
+        );
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
 
         let result = handler.handle(&ctx, cmd).await;

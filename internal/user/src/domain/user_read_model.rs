@@ -20,6 +20,25 @@ pub struct Ban {
     pub ban_type: BanType,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct GetUsersOptions {
+    pub first: u32,
+    pub after: Option<String>,
+    pub sort_direction: SortDirection,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SortDirection {
+    ASC,
+    DESC,
+}
+
+#[derive(Debug)]
+pub struct GetUsersResult {
+    pub users: Vec<UserReadModel>,
+    pub has_next: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserReadModel {
     pub id: String,

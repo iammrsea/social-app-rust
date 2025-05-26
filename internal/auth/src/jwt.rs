@@ -4,7 +4,7 @@ use shared::{config::Config, guards::roles::UserRole};
 
 use serde::{Deserialize, Serialize};
 
-use crate::AuthResult;
+use crate::result::AuthResult;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

@@ -3,6 +3,7 @@ use getset::Getters;
 
 pub mod mongoimpl;
 pub mod otp_respository;
+pub mod repository;
 
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]

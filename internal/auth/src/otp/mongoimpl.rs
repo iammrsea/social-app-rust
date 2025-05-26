@@ -1,7 +1,5 @@
-use crate::AuthResult;
-
 use super::{OtpEntry, otp_respository::OtpRepository};
-use crate::errors::AuthError;
+use crate::{errors::AuthError, result::AuthResult};
 use mongodb::{Collection, Database, bson::doc};
 use serde::{Deserialize, Serialize};
 
@@ -45,6 +43,37 @@ impl MongoOtpRepository {
     pub fn new(db: Database) -> Self {
         let collection = db.collection::<OtpDocument>("otps");
         Self { collection }
+    }
+    pub async fn upsert_otp(&self, otp: OtpEntry) -> AuthResult<()> {
+        let doc: OtpDocument = otp.into();
+        self.collection
+            .find_one_and_replace(doc! {"email": &doc.email }, &doc)
+            .upsert(true)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_opt(&self, otp: OtpEntry) -> AuthResult<()> {
+        let document: OtpDocument = otp.into();
+        self.collection
+            .replace_one(doc! { "email": &document.email }, document)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_otp_by_user_email(&self, email: &str) -> AuthResult<OtpEntry> {
+        let filter = doc! { "email": email };
+        if let Some(opt) = self.collection.find_one(filter).await? {
+            Ok(opt.into())
+        } else {
+            Err(AuthError::OtpNotFound)
+        }
+    }
+
+    pub async fn delete_otp(&self, email: &str) -> AuthResult<()> {
+        let filter = doc! { "email": email };
+        self.collection.delete_one(filter).await?;
+        Ok(())
     }
 }
 

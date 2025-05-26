@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::AuthResult;
+use crate::result::AuthResult;
 
 pub fn validate_email(email: &str) -> AuthResult<()> {
     #[derive(Validate, Deserialize)]
