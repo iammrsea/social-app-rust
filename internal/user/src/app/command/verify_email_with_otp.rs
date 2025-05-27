@@ -121,8 +121,106 @@ impl CommandHanlder<VerifyEmailWithOtp, UserDomainError, Option<String>>
                 self.otp_repo
                     .upsert_otp(otp_entry, Some(DBTransaction::Mock(&mut MockTransaction)))
                     .await?;
-                Ok(None)
+                Ok(Some("token".to_string()))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::user::{EmailStatus, User};
+    use crate::domain::user_auth::otp::{OtpEntry, utils as otp_utils};
+    use crate::infra::repository::otp_repository_trait::MockOtpRepositoryTrait;
+    use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
+    use mockall::predicate::eq;
+    use shared::auth::{AppContext, AuthUser};
+    use shared::guards::roles::UserRole;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn verify_email_with_otp_success() {
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        let mut mock_otp_repo = MockOtpRepositoryTrait::new();
+
+        let email = "test@example.com".to_string();
+        let otp = "123456".to_string();
+        let otp_entry = OtpEntry::new(
+            email.clone(),
+            false,
+            0,
+            otp_utils::hash_otp(&otp),
+            otp_utils::get_otp_expiration(),
+        );
+        let mut user = User::new_test_user(None);
+        user.set_email_status(EmailStatus::Unverified);
+
+        mock_otp_repo
+            .expect_get_otp_by_user_email()
+            .with(eq(email.clone()))
+            .returning(move |_| Ok(Some(otp_entry.clone())));
+
+        mock_user_repo
+            .expect_get_user_by_username_or_email()
+            .with(eq("".to_string()), eq(email.clone()))
+            .returning(move |_, _| Ok(Some(user.clone())));
+
+        mock_otp_repo.expect_upsert_otp().returning(|_, _| Ok(()));
+
+        mock_user_repo.expect_upsert_user().returning(|_, _| Ok(()));
+
+        let handler = VerifyEmailWithOtpHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(OtpRepository::Mock(mock_otp_repo)),
+        );
+
+        let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
+        let cmd = VerifyEmailWithOtp { email, otp };
+
+        let result = handler.handle(&ctx, cmd).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn verify_email_with_otp_invalid_otp() {
+        let mut mock_user_repo = MockUserRepositoryTrait::new();
+        let mut mock_otp_repo = MockOtpRepositoryTrait::new();
+
+        let email = "test@example.com".to_string();
+        let otp = "wrong_otp".to_string();
+        let otp_entry = OtpEntry::new(
+            email.clone(),
+            false,
+            0,
+            otp_utils::hash_otp("123456"),
+            otp_utils::get_otp_expiration(),
+        );
+        let mut user = User::new_test_user(None);
+        user.set_email_status(EmailStatus::Unverified);
+
+        mock_otp_repo
+            .expect_get_otp_by_user_email()
+            .with(eq(email.clone()))
+            .returning(move |_| Ok(Some(otp_entry.clone())));
+
+        mock_user_repo
+            .expect_get_user_by_username_or_email()
+            .with(eq("".to_string()), eq(email.clone()))
+            .returning(move |_, _| Ok(Some(user.clone())));
+
+        mock_otp_repo.expect_upsert_otp().returning(|_, _| Ok(()));
+
+        let handler = VerifyEmailWithOtpHandler::new(
+            Arc::new(UserRepository::Mock(mock_user_repo)),
+            Arc::new(OtpRepository::Mock(mock_otp_repo)),
+        );
+
+        let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Regular));
+        let cmd = VerifyEmailWithOtp { email, otp };
+
+        let result = handler.handle(&ctx, cmd).await;
+        assert!(result.is_err());
     }
 }

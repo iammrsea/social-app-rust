@@ -2,8 +2,9 @@ use chrono::{Duration, Utc};
 use getset::Getters;
 
 use super::{errors::UserAuthError, result::UserAuthResult};
+pub const MAX_ALLOWED_ATTEMPTS: u32 = 5;
 
-#[derive(Debug, Clone, Getters)]
+#[derive(Debug, Clone, Getters, PartialEq)]
 #[getset(get = "pub")]
 pub struct OtpEntry {
     otp_hash: String,
@@ -36,7 +37,6 @@ impl OtpEntry {
         self.used
     }
     pub fn exceeded_attempts(&self) -> bool {
-        const MAX_ALLOWED_ATTEMPTS: u32 = 5;
         self.attempts >= MAX_ALLOWED_ATTEMPTS
     }
     pub fn mark_as_used(&mut self) {

@@ -11,6 +11,7 @@ pub enum UserAuthError {
     InvalidOtp,
     Database,
     InvalidTransaction,
+    MissMatchOtp,
 }
 
 impl fmt::Display for UserAuthError {
@@ -24,6 +25,7 @@ impl fmt::Display for UserAuthError {
             Self::TooManyAttempts => write!(f, "Too many attempts"),
             Self::InvalidOtp => write!(f, "Invalid otp"),
             Self::InvalidTransaction => write!(f, "Invalid transaction"),
+            Self::MissMatchOtp => write!(f, "Otp does not match"),
         }
     }
 }

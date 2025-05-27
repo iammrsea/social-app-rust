@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # Settings
-COMPOSE_FILE="docker-compose-test.yml"
+COMPOSE_FILE="compose-test.yaml"
 MONGO_PORT=27017
 
 # Start MongoDB container
 echo "Starting MongoDB container..."
-docker-compose -f "$COMPOSE_FILE" up -d
+docker compose -f "$COMPOSE_FILE" up -d --pull never
 echo "MongoDB container started."
 
 # Define cleanup function
@@ -15,7 +15,7 @@ cleanup() {
     echo "Stopping Mongo container..."
     # docker stop "$CONTAINER_NAME" >/dev/null
     # docker rm "$CONTAINER_NAME" >/dev/null
-    docker-compose -f "$COMPOSE_FILE" down
+    docker compose -f "$COMPOSE_FILE" down
     echo "Mongo container stopped and removed."
 }
 
