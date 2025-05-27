@@ -32,7 +32,7 @@ impl QueryHandler<GetUserById, UserReadModel, UserDomainError> for GetUserByIdHa
     async fn handle(&self, ctx: &AppContext, cmd: GetUserById) -> UserDomainResult<UserReadModel> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::ViewUser)?;
+            .authorize(&auth_user.0.role, &UserPermission::ViewUser)?;
         let user = self.user_repo.get_user_by_id(&cmd.id).await?;
         if let Some(found_user) = user {
             return Ok(found_user);

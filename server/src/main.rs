@@ -32,13 +32,13 @@ async fn main() {
 
     let config = Config::build();
 
-    info!("GraphQL API at http//localhost:{}/graphql", config.port);
+    info!("GraphQL API at http:://localhost:{}/graphql", config.port);
 
     info!(
-        "GraphQL Playground at http//localhost:{}/playground",
+        "GraphQL Playground at http:://localhost:{}/playground",
         config.port
     );
-    info!("Axum server at http//localhost:{}", config.port);
+    info!("Axum server at http:://localhost:{}", config.port);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", config.port))
         .await

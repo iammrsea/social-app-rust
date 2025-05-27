@@ -2,7 +2,6 @@ use crate::app_service::AppService;
 use async_graphql::{Context, Object};
 use shared::{
     auth::{AppContext, AuthUser},
-    guards::roles::UserRole,
     query_handler::QueryHandler,
 };
 use user::domain::user_read_model::UserReadModel;
@@ -23,7 +22,8 @@ impl UserQuery {
         id: String,
     ) -> UserDomainResult<UserReadModel> {
         let app_service = ctx.data::<AppService>().unwrap();
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         app_service
             .services
             .user_service
@@ -40,7 +40,8 @@ impl UserQuery {
         email: String,
     ) -> UserDomainResult<UserReadModel> {
         let app_service = ctx.data::<AppService>().unwrap();
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         app_service
             .services
             .user_service

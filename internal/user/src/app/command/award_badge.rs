@@ -34,7 +34,7 @@ impl CommandHanlder<AwardBadge, UserDomainError> for AwardBadgeHandler {
     async fn handle(&self, ctx: &AppContext, cmd: AwardBadge) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::AwardBadge)?;
+            .authorize(&auth_user.0.role, &UserPermission::AwardBadge)?;
         self.user_repo
             .award_badge(&cmd.user_id, |user| {
                 user.award_badge(cmd.badge);

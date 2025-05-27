@@ -33,7 +33,7 @@ impl CommandHanlder<UnbanUser, UserDomainError> for UnbanUserHandler {
     async fn handle(&self, ctx: &AppContext, cmd: UnbanUser) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::UnbanUser)?;
+            .authorize(&auth_user.0.role, &UserPermission::UnbanUser)?;
         self.user_repo
             .unban_user(&cmd.user_id, |user| {
                 user.unban();

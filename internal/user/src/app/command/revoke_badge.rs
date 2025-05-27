@@ -34,7 +34,7 @@ impl CommandHanlder<RevokeBadge, UserDomainError> for RevokeBadgeHandler {
     async fn handle(&self, ctx: &AppContext, cmd: RevokeBadge) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::RevokeBadge)?;
+            .authorize(&auth_user.0.role, &UserPermission::RevokeBadge)?;
         self.user_repo
             .revoke_badge(&cmd.user_id, |user| {
                 user.revoke_badge(cmd.badge);

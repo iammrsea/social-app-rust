@@ -3,7 +3,6 @@ use async_graphql::{Context, Object, SimpleObject};
 use shared::{
     auth::{AppContext, AuthUser},
     command_handler::CommandHanlder,
-    guards::roles::UserRole,
 };
 
 use user::{
@@ -32,8 +31,8 @@ impl UserMutation {
     #[graphql(name = "signUp")]
     async fn sign_up(&self, ctx: &Context<'_>, cmd: SignUp) -> UserDomainResult<AuthResponse> {
         let app_service = ctx.data::<AppService>().unwrap();
-        //TODO: get user from context
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Guest));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         app_service
             .services
             .user_service
@@ -49,8 +48,8 @@ impl UserMutation {
     #[graphql(name = "signIn")]
     async fn sign_in(&self, ctx: &Context<'_>, cmd: SignIn) -> UserDomainResult<AuthResponse> {
         let app_service = ctx.data::<AppService>().unwrap();
-        //TODO: get user from context
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Guest));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         app_service
             .services
             .user_service
@@ -72,8 +71,8 @@ impl UserMutation {
         cmd: VerifyOtp,
     ) -> UserDomainResult<VerificationResponse> {
         let app_service = ctx.data::<AppService>().unwrap();
-        //TODO: get user from context
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Guest));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         let token = app_service
             .services
             .user_service
@@ -92,8 +91,8 @@ impl UserMutation {
         cmd: VerifyEmailWithOtp,
     ) -> UserDomainResult<VerificationResponse> {
         let app_service = ctx.data::<AppService>().unwrap();
-        //TODO: get user from context
-        let app_ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Guest));
+        let auth_user = ctx.data::<AuthUser>().unwrap();
+        let app_ctx = AppContext::new().with_user(auth_user.to_owned());
         let token = app_service
             .services
             .user_service

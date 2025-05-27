@@ -4,13 +4,17 @@ use async_graphql::InputObject;
 use async_trait::async_trait;
 
 use crate::{
-    domain::user_auth::{errors::UserAuthError, jwt, otp::ComparedOtps},
+    domain::user_auth::{errors::UserAuthError, otp::ComparedOtps},
     infra::repository::otp_repository::OtpRepository,
 };
 use serde::Deserialize;
 use validator::Validate;
 
-use shared::{auth::AppContext, command_handler::CommandHanlder, db_transactions::MockTransaction};
+use shared::{
+    auth::{AppContext, jwt},
+    command_handler::CommandHanlder,
+    db_transactions::MockTransaction,
+};
 
 use crate::domain::{
     errors::UserDomainError, result::UserDomainResult, user::EmailStatus,
@@ -60,8 +64,6 @@ impl CommandHanlder<VerifyEmailWithOtp, UserDomainError, Option<String>>
             .await?
             .ok_or(UserDomainError::UserNotFound)?;
 
-        otp_entry.validate_otp()?;
-
         if let Err(err) = otp_entry.validate_otp() {
             if err == UserAuthError::TooManyAttempts {
                 //TODO: set up eventing system to delete OTP after too many attempts
@@ -101,7 +103,11 @@ impl CommandHanlder<VerifyEmailWithOtp, UserDomainError, Option<String>>
 
                 if let Ok(..) = result {
                     session.commit_transaction().await?;
-                    let token = jwt::create_jwt(user.email().to_string(), user.role().to_owned())?;
+                    let token = jwt::create_jwt(
+                        user.email().to_string(),
+                        user.role().to_owned(),
+                        user.id().to_string(),
+                    )?;
                     tracing::info!(
                         "OTP verified successfully for user: {}, token: {}",
                         user.email(),

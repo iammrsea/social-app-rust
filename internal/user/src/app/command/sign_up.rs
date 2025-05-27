@@ -51,19 +51,22 @@ impl CommandHanlder<SignUp, UserDomainError> for SignUpHandler {
             .user_repo
             .get_user_by_username_or_email(&cmd.username, &cmd.email)
             .await?;
-        if user.is_some() && user.unwrap().email_status() == &EmailStatus::Verified {
+
+        if user.is_some() && user.as_ref().unwrap().email_status() == &EmailStatus::Verified {
             return Err(UserDomainError::UsernameOrEmailTaken);
         }
 
-        let repo_db = self.user_repo.get_repo_db();
         let user_email = cmd.email.clone();
-        let user = User::new(cmd.email, cmd.username, UserRole::Regular);
+        let new_user = User::new(cmd.email, cmd.username, UserRole::Regular);
+
+        let user = user.map_or(new_user, |existing_user| existing_user);
 
         let otp_val = otp_utils::generate_otp();
         let otp_hash = otp_utils::hash_otp(&otp_val);
         let expires_at = otp_utils::get_otp_expiration();
         let otp_entry = OtpEntry::new(user_email.clone(), false, 0, otp_hash, expires_at);
 
+        let repo_db = self.user_repo.get_repo_db();
         match repo_db {
             RepoDB::MongoDb(db) => {
                 let mut session = db.client().start_session().await?;
@@ -83,12 +86,13 @@ impl CommandHanlder<SignUp, UserDomainError> for SignUpHandler {
 
                 if let Ok(..) = result {
                     session.commit_transaction().await?;
+                    //TODO: send otp to user via email or sms
+                    tracing::info!("OTP for user {} is {}", user_email, otp_val);
+                    Ok(())
                 } else {
                     session.abort_transaction().await?;
+                    return result;
                 }
-                //TODO: send otp to user via email or sms
-                tracing::info!("OTP for user {} is {}", user_email, otp_val);
-                Ok(())
             }
             RepoDB::Mock => {
                 self.user_repo

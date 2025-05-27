@@ -4,13 +4,16 @@ use async_graphql::InputObject;
 use async_trait::async_trait;
 
 use crate::{
-    domain::user_auth::{errors::UserAuthError, jwt, otp::ComparedOtps},
+    domain::user_auth::{errors::UserAuthError, otp::ComparedOtps},
     infra::repository::otp_repository::OtpRepository,
 };
 use serde::Deserialize;
 use validator::Validate;
 
-use shared::{auth::AppContext, command_handler::CommandHanlder};
+use shared::{
+    auth::{AppContext, jwt},
+    command_handler::CommandHanlder,
+};
 
 use crate::domain::{
     errors::UserDomainError, result::UserDomainResult, user_auth::otp::utils as otp_utils,
@@ -67,7 +70,11 @@ impl CommandHanlder<VerifyOtp, UserDomainError, String> for VerifyOtpHandler {
         otp_entry.mark_as_used();
         otp_entry.increment_attempts();
         self.otp_repo.upsert_otp(otp_entry, None).await?;
-        let token = jwt::create_jwt(user.email().to_string(), user.role().to_owned())?;
+        let token = jwt::create_jwt(
+            user.email().to_string(),
+            user.role().to_owned(),
+            user.id().to_string(),
+        )?;
         //TODO: Set up eventing system to delete OTP after successful otp verification
         tracing::info!(
             "OTP verified successfully for user: {}, token: {}",

@@ -18,10 +18,10 @@ pub mod user {
     use user::domain::{errors::UserDomainError, result::UserDomainResult};
 
     pub fn can_change_username(user_id: &str, auth_user: &AuthUser) -> UserDomainResult<()> {
-        match auth_user.role {
+        match auth_user.0.role {
             Admin => Ok(()),
             Regular | Moderator => {
-                if user_id == auth_user.id {
+                if user_id == auth_user.0.id {
                     return Ok(());
                 }
                 return Err(UserDomainError::Unauthorized);
@@ -37,7 +37,7 @@ pub mod user {
         #[test]
         fn regular_user_can_change_their_username() {
             let auth_user = AuthUser::new_test_auth_user(Regular);
-            let user_id = auth_user.id.clone();
+            let user_id = auth_user.0.id.clone();
             let can_change = can_change_username(user_id.as_str(), &auth_user);
             assert_eq!(true, can_change.is_ok());
         }
@@ -45,7 +45,7 @@ pub mod user {
         #[test]
         fn moderator_can_change_their_username() {
             let auth_user = AuthUser::new_test_auth_user(Moderator);
-            let user_id = auth_user.id.clone();
+            let user_id = auth_user.0.id.clone();
             let can_change = can_change_username(user_id.as_str(), &auth_user);
             assert_eq!(true, can_change.is_ok());
         }
@@ -74,7 +74,7 @@ pub mod user {
         #[test]
         fn guest_cannot_change_username() {
             let auth_user = AuthUser::new_test_auth_user(Guest);
-            let user_id = auth_user.id.clone();
+            let user_id = auth_user.0.id.clone();
             let can_change = can_change_username(user_id.as_str(), &auth_user);
             assert_eq!(true, can_change.is_err());
         }

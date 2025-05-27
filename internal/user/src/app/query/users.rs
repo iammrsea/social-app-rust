@@ -34,7 +34,7 @@ impl QueryHandler<GetUsersOptions, Result, UserDomainError> for GetUsersHandler 
     async fn handle(&self, ctx: &AppContext, cmd: GetUsersOptions) -> UserDomainResult<Result> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::ListUsers)?;
+            .authorize(&auth_user.0.role, &UserPermission::ListUsers)?;
         let resp = self.user_repo.get_users(&cmd).await?;
         let result = Result {
             data: resp.users,

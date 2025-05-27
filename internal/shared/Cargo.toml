@@ -16,3 +16,4 @@ base64 = "0.22.1"
 tokio = { version = "1.45.0", features = ["full"] }
 async-graphql = "7.0.16"
 validator = { version = "0.19", features = ["derive"] }
+jsonwebtoken = "9.3.1"

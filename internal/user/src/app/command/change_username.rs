@@ -33,7 +33,7 @@ impl CommandHanlder<ChangeUsername, UserDomainError> for ChangeUsernameHandler {
     async fn handle(&self, ctx: &AppContext, cmd: ChangeUsername) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
 
-        self.guard.can_change_username(&auth_user.id, &auth_user)?;
+        self.guard.can_change_username(&cmd.user_id, &auth_user)?;
 
         let exists = self
             .user_repo
@@ -58,6 +58,7 @@ mod tests {
 
     use crate::domain::user::User;
     use crate::guards::MockUserGuards;
+
     use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
     use mockall::predicate::eq;
     use shared::{
@@ -74,16 +75,16 @@ mod tests {
         let auth_user = AuthUser::new_test_auth_user(UserRole::Regular);
 
         let cmd = ChangeUsername {
-            user_id: auth_user.id.clone(),
+            user_id: auth_user.0.id.clone(),
             username: "newUsername".into(),
         };
-        let expected_auth_user_id = auth_user.id.clone();
+        let expected_auth_user_id = auth_user.0.id.clone();
         let expected_auth_user = auth_user.clone();
         let expected_username = cmd.username.clone();
 
         mock_guard
             .expect_can_change_username()
-            .with(eq(expected_auth_user_id.clone()), eq(expected_auth_user))
+            .with(eq(cmd.user_id.clone()), eq(expected_auth_user))
             .returning(|_, _| Ok(()));
 
         mock_user_repo
@@ -129,16 +130,16 @@ mod tests {
         let auth_user = AuthUser::new_test_auth_user(UserRole::Regular);
 
         let cmd = ChangeUsername {
-            user_id: auth_user.id.clone(),
+            user_id: auth_user.0.id.clone(),
             username: "newUsername".into(),
         };
-        let expected_auth_user_id = auth_user.id.clone();
+        let expected_user_id = cmd.user_id.clone();
         let expected_auth_user = auth_user.clone();
         let expected_username = cmd.username.clone();
 
         mock_guard
             .expect_can_change_username()
-            .with(eq(expected_auth_user_id), eq(expected_auth_user))
+            .with(eq(expected_user_id), eq(expected_auth_user))
             .returning(|_, _| Ok(()));
 
         mock_user_repo

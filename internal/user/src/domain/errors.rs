@@ -1,4 +1,5 @@
 use super::user_auth::errors::UserAuthError;
+use shared::auth::jwt::JWTError;
 use std::fmt;
 use tracing::error;
 
@@ -17,6 +18,7 @@ pub enum UserDomainError {
     TransactionFailed,
     UnverifiedEmail,
     UnableToVerifyEmail,
+    InvalidToken,
 }
 
 impl fmt::Display for UserDomainError {
@@ -35,6 +37,7 @@ impl fmt::Display for UserDomainError {
             Self::TransactionFailed => write!(f, "Transaction failed"),
             Self::UnverifiedEmail => write!(f, "Email is not verified"),
             Self::UnableToVerifyEmail => write!(f, "Unable to verify email address"),
+            Self::InvalidToken => write!(f, "Invalid token"),
         }
     }
 }
@@ -50,7 +53,7 @@ impl From<UserAuthError> for UserDomainError {
 impl From<mongodb::error::Error> for UserDomainError {
     fn from(err: mongodb::error::Error) -> Self {
         error!("Mongodb Error: {:#?}", err);
-        Self::Database(err.to_string()) // TODO: Return a generic database error instead of the specific error
+        Self::Database("Database error".to_string()) // TODO: Return a generic database error instead of the specific error
     }
 }
 
@@ -59,5 +62,12 @@ impl From<validator::ValidationErrors> for UserDomainError {
         let json =
             serde_json::to_string(&err).unwrap_or_else(|_| format!("{{\"error\": \"{}\"}}", err));
         Self::Validation(json)
+    }
+}
+
+impl From<JWTError> for UserDomainError {
+    fn from(err: JWTError) -> Self {
+        error!("JWT Error: {:#?}", err);
+        Self::InvalidToken
     }
 }

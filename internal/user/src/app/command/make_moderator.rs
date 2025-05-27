@@ -33,7 +33,7 @@ impl CommandHanlder<MakeModerator, UserDomainError> for MakeModeratorHandler {
     async fn handle(&self, ctx: &AppContext, cmd: MakeModerator) -> UserDomainResult<()> {
         let auth_user = get_auth_user_from_ctx(&ctx);
         self.guard
-            .authorize(&auth_user.role, &UserPermission::MakeModerator)?;
+            .authorize(&auth_user.0.role, &UserPermission::MakeModerator)?;
         self.user_repo
             .make_moderator(&cmd.user_id, |user| {
                 user.make_moderator();
