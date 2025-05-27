@@ -1,9 +1,7 @@
 use chrono::{Duration, Utc};
 use getset::Getters;
 
-pub mod mongoimpl;
-pub mod otp_respository;
-pub mod repository;
+use super::{errors::UserAuthError, result::UserAuthResult};
 
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
@@ -16,19 +14,7 @@ pub struct OtpEntry {
 }
 
 impl OtpEntry {
-    pub fn new(email: String) -> Self {
-        let otp = utils::generate_otp();
-        let otp_hash = utils::hash_otp(&otp);
-        let expires_at = (Utc::now() + Duration::minutes(5)).timestamp_millis();
-        Self {
-            otp_hash,
-            expires_at,
-            used: false,
-            attempts: 0,
-            email,
-        }
-    }
-    pub fn new_with_all_fields(
+    pub fn new(
         email: String,
         used: bool,
         attempts: u32,
@@ -59,6 +45,24 @@ impl OtpEntry {
     pub fn increment_attempts(&mut self) {
         self.attempts += 1;
     }
+    pub fn validate_otp(&self) -> UserAuthResult<()> {
+        if self.is_used() {
+            return Err(UserAuthError::OtpAlreadyUsed);
+        }
+        if self.is_expired() {
+            return Err(UserAuthError::OtpExpired);
+        }
+        if self.exceeded_attempts() {
+            return Err(UserAuthError::TooManyAttempts);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ComparedOtps {
+    Equal,
+    NotEqual,
 }
 
 pub mod utils {
@@ -76,9 +80,13 @@ pub mod utils {
         hasher.update(otp.as_bytes());
         format!("{:x}", hasher.finalize())
     }
-    pub fn compare_otps(otp: &str, otp_hash: &str) -> bool {
+    pub fn compare_otps(otp: &str, otp_hash: &str) -> ComparedOtps {
         let hashed_otp = hash_otp(otp);
-        hashed_otp == otp_hash
+        if hashed_otp == otp_hash {
+            ComparedOtps::Equal
+        } else {
+            ComparedOtps::NotEqual
+        }
     }
     pub fn get_otp_expiration() -> i64 {
         let expiration_time = Utc::now() + Duration::minutes(5);
@@ -104,7 +112,7 @@ pub mod utils {
         fn test_compare_otps() {
             let otp = "123456";
             let hashed_otp = hash_otp(otp);
-            assert!(compare_otps(otp, &hashed_otp));
+            assert_eq!(compare_otps(otp, &hashed_otp), ComparedOtps::Equal);
         }
     }
 }

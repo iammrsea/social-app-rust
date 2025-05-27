@@ -101,6 +101,7 @@ impl MongoUserRepository {
             .find_one(doc! {"_id": user_id})
             .await?
             .map(|doc| doc.into());
+
         Ok(user)
     }
     pub async fn get_user_by_username_or_email(
@@ -153,8 +154,8 @@ impl MongoUserRepository {
             .upsert(true);
         if let Some(tx) = tx {
             match tx {
-                DBTransaction::MongoDb(s) => {
-                    fr.session(s).await?;
+                DBTransaction::MongoDb(session) => {
+                    fr.session(session).await?;
                 }
                 _ => {
                     return Err(UserDomainError::InvalidTransaction);

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use auth::repository::OtpRepository;
 use user::infra::repository::{
-    user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
+    otp_repository::OtpRepository, user_read_model_repository::UserReadModelRepository,
+    user_repository::UserRepository,
 };
 
 use mongo_storage::MongoDBStorage;
@@ -12,7 +12,7 @@ mod mongo_storage;
 pub struct Repos {
     pub user_repo: Arc<UserRepository>,
     pub user_read_repo: Arc<UserReadModelRepository>,
-    pub otp_repo: OtpRepository,
+    pub otp_repo: Arc<OtpRepository>,
 }
 
 pub enum StorageEngine {

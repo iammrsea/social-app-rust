@@ -140,6 +140,10 @@ impl User {
     pub fn test_user_id() -> String {
         "user-id123".into()
     }
+    pub fn set_email_status(&mut self, email_status: EmailStatus) {
+        self.email_status = email_status;
+        self.updated_at = Utc::now();
+    }
 }
 
 /// Implement getters;

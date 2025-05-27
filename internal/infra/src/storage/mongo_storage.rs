@@ -7,13 +7,13 @@ use crate::config::{Config, MongoDbConfig};
 use shared::types::AppResult;
 use std::sync::Arc;
 
-use auth::mongoimpl::MongoOtpRepository;
-use auth::repository::OtpRepository;
 use user::infra::mongoimpl::{
-    user_read_model_repository::MongoUserReadModelRepository, user_repository::MongoUserRepository,
+    otp_respository::MongoOtpRepository, user_read_model_repository::MongoUserReadModelRepository,
+    user_repository::MongoUserRepository,
 };
 use user::infra::repository::{
-    user_read_model_repository::UserReadModelRepository, user_repository::UserRepository,
+    otp_repository::OtpRepository, user_read_model_repository::UserReadModelRepository,
+    user_repository::UserRepository,
 };
 
 use super::*;
@@ -47,7 +47,7 @@ impl MongoDBStorage {
             user_read_repo: Arc::new(UserReadModelRepository::MongoDb(
                 MongoUserReadModelRepository::new(db.clone()),
             )),
-            otp_repo: OtpRepository::MongoDb(MongoOtpRepository::new(db.clone())),
+            otp_repo: Arc::new(OtpRepository::MongoDb(MongoOtpRepository::new(db.clone()))),
         }
     }
 }

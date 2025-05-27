@@ -3,35 +3,39 @@ use std::sync::Arc;
 use async_graphql::InputObject;
 use async_trait::async_trait;
 
-use auth::repository::OtpRepository;
+use crate::infra::repository::otp_repository::OtpRepository;
 use serde::Deserialize;
 use validator::Validate;
 
-use shared::{auth::AppContext, command_handler::CommandHanlder, guards::roles::UserRole};
+use shared::{
+    auth::AppContext, command_handler::CommandHanlder, db_transactions::MockTransaction,
+    guards::roles::UserRole,
+};
 
 use crate::domain::{
     errors::UserDomainError,
     result::UserDomainResult,
     user::{EmailStatus, User},
+    user_auth::otp::{OtpEntry, utils as otp_utils},
 };
 use crate::infra::repository::user_repository::UserRepository;
 use shared::db_transactions::{DBTransaction, RepoDB};
 
 #[derive(Debug, Clone, Validate, Deserialize, InputObject)]
-pub struct CreateAccount {
+pub struct SignUp {
     #[validate(email)]
     pub email: String,
     #[validate(length(min = 3, max = 40))]
     pub username: String,
 }
 
-pub struct CreateAccountHandler {
+pub struct SignUpHandler {
     user_repo: Arc<UserRepository>,
-    pub otp_repo: OtpRepository, // TODO: remove pub modifier
+    otp_repo: Arc<OtpRepository>,
 }
 
-impl CreateAccountHandler {
-    pub fn new(user_repo: Arc<UserRepository>, otp_repo: OtpRepository) -> Self {
+impl SignUpHandler {
+    pub fn new(user_repo: Arc<UserRepository>, otp_repo: Arc<OtpRepository>) -> Self {
         Self {
             user_repo,
             otp_repo,
@@ -40,8 +44,8 @@ impl CreateAccountHandler {
 }
 
 #[async_trait]
-impl CommandHanlder<CreateAccount, UserDomainError> for CreateAccountHandler {
-    async fn handle(&self, _ctx: &AppContext, cmd: CreateAccount) -> UserDomainResult<()> {
+impl CommandHanlder<SignUp, UserDomainError> for SignUpHandler {
+    async fn handle(&self, _ctx: &AppContext, cmd: SignUp) -> UserDomainResult<()> {
         cmd.validate()?;
         let user = self
             .user_repo
@@ -52,7 +56,14 @@ impl CommandHanlder<CreateAccount, UserDomainError> for CreateAccountHandler {
         }
 
         let repo_db = self.user_repo.get_repo_db();
-        let user = User::new(cmd.username, cmd.email, UserRole::Regular);
+        let user_email = cmd.email.clone();
+        let user = User::new(cmd.email, cmd.username, UserRole::Regular);
+
+        let otp_val = otp_utils::generate_otp();
+        let otp_hash = otp_utils::hash_otp(&otp_val);
+        let expires_at = otp_utils::get_otp_expiration();
+        let otp_entry = OtpEntry::new(user_email.clone(), false, 0, otp_hash, expires_at);
+
         match repo_db {
             RepoDB::MongoDb(db) => {
                 let mut session = db.client().start_session().await?;
@@ -61,22 +72,31 @@ impl CommandHanlder<CreateAccount, UserDomainError> for CreateAccountHandler {
                     self.user_repo
                         .upsert_user(user, Some(DBTransaction::MongoDb(&mut session)))
                         .await?;
+
+                    self.otp_repo
+                        .upsert_otp(otp_entry, Some(DBTransaction::MongoDb(&mut session)))
+                        .await?;
+
                     Ok(())
                 })()
                 .await;
 
-                match result {
-                    Ok(_) => {
-                        session.commit_transaction().await?;
-                    }
-                    Err(..) => {
-                        session.abort_transaction().await?;
-                    }
+                if let Ok(..) = result {
+                    session.commit_transaction().await?;
+                } else {
+                    session.abort_transaction().await?;
                 }
-                result
+                //TODO: send otp to user via email or sms
+                tracing::info!("OTP for user {} is {}", user_email, otp_val);
+                Ok(())
             }
             RepoDB::Mock => {
-                self.user_repo.upsert_user(user, None).await?;
+                self.user_repo
+                    .upsert_user(user, Some(DBTransaction::Mock(&mut MockTransaction)))
+                    .await?;
+                self.otp_repo
+                    .upsert_otp(otp_entry, Some(DBTransaction::Mock(&mut MockTransaction)))
+                    .await?;
                 Ok(())
             }
         }
@@ -86,7 +106,9 @@ impl CommandHanlder<CreateAccount, UserDomainError> for CreateAccountHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use auth::repository::{MockOtpRepositoryTrait, OtpRepository};
+    use crate::infra::repository::{
+        otp_repository::OtpRepository, otp_repository_trait::MockOtpRepositoryTrait,
+    };
     use mockall::predicate::eq;
     use shared::auth::{AppContext, AuthUser};
     use std::sync::Arc;
@@ -94,17 +116,18 @@ mod tests {
     use crate::infra::repository::user_repository_trait::MockUserRepositoryTrait;
 
     #[tokio::test]
-    async fn create_account_success() {
+    async fn test_sign_up_success() {
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let mock_otp_repo = MockOtpRepositoryTrait::new();
+        let mut mock_otp_repo = MockOtpRepositoryTrait::new();
 
-        let cmd = CreateAccount {
+        let cmd = SignUp {
             email: "test@gmail.com".into(),
             username: "test".into(),
         };
 
         let expected_username = cmd.username.clone();
         let expected_email = cmd.email.clone();
+        let expected_email_opt = cmd.email.clone();
 
         let auth_user = AuthUser::new_test_auth_user(UserRole::Guest);
 
@@ -116,30 +139,37 @@ mod tests {
             )
             .returning(|_, _| Ok(None));
 
-        mock_user_repo.expect_upsert_user().returning(|_, _| Ok(()));
-
         mock_user_repo
-            .expect_create_account()
-            .returning(move |user| {
-                assert_eq!(expected_email.to_string(), user.email());
-                assert_eq!(expected_username.to_string(), user.username());
-                Ok(())
-            });
+            .expect_upsert_user()
+            .withf(move |user, session| {
+                session.is_some() && {
+                    user.username() == expected_username && user.email() == expected_email
+                }
+            })
+            .returning(|_, _| Ok(()));
+        mock_otp_repo
+            .expect_upsert_otp()
+            .withf(move |otp, session| {
+                session.is_some() && {
+                    otp.email() == &expected_email_opt && !otp.is_used() && *otp.attempts() == 0
+                }
+            })
+            .returning(|_, _| Ok(()));
 
-        let handler = CreateAccountHandler::new(
+        let handler = SignUpHandler::new(
             Arc::new(UserRepository::Mock(mock_user_repo)),
-            OtpRepository::Mock(mock_otp_repo),
+            Arc::new(OtpRepository::Mock(mock_otp_repo)),
         );
         let ctx = AppContext::new().with_user(auth_user);
         let result = handler.handle(&ctx, cmd).await;
-        assert!(result.is_ok())
+        assert!(result.is_ok());
     }
     #[tokio::test]
-    async fn create_account_failed_email_or_username_exists() {
+    async fn test_sign_up_failed_email_or_username_exists() {
         let mut mock_user_repo = MockUserRepositoryTrait::new();
-        let mock_otp_repo = MockOtpRepositoryTrait::new();
+        let mut mock_otp_repo = MockOtpRepositoryTrait::new();
 
-        let cmd = CreateAccount {
+        let cmd = SignUp {
             email: "test@gmail.com".into(),
             username: "test".into(),
         };
@@ -157,11 +187,12 @@ mod tests {
             )
             .returning(|_, _| Ok(Some(User::new_test_user(None))));
 
-        mock_user_repo.expect_create_account().never();
+        mock_user_repo.expect_upsert_user().never();
+        mock_otp_repo.expect_upsert_otp().never();
 
-        let handler = CreateAccountHandler::new(
+        let handler = SignUpHandler::new(
             Arc::new(UserRepository::Mock(mock_user_repo)),
-            OtpRepository::Mock(mock_otp_repo),
+            Arc::new(OtpRepository::Mock(mock_otp_repo)),
         );
         let ctx = AppContext::new().with_user(auth_user);
         let result = handler.handle(&ctx, cmd).await;
@@ -173,13 +204,13 @@ mod tests {
         let mock_user_repo = MockUserRepositoryTrait::new();
         let mock_otp_repo = MockOtpRepositoryTrait::new();
 
-        let cmd = CreateAccount {
+        let cmd = SignUp {
             email: "invalid_email".into(),
             username: "us".into(),
         };
-        let handler = CreateAccountHandler::new(
+        let handler = SignUpHandler::new(
             Arc::new(UserRepository::Mock(mock_user_repo)),
-            OtpRepository::Mock(mock_otp_repo),
+            Arc::new(OtpRepository::Mock(mock_otp_repo)),
         );
         let ctx = AppContext::new().with_user(AuthUser::new_test_auth_user(UserRole::Admin));
         let result = handler.handle(&ctx, cmd).await;

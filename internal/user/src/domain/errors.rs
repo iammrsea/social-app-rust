@@ -1,4 +1,4 @@
-use auth::errors::AuthError;
+use super::user_auth::errors::UserAuthError;
 use std::fmt;
 use tracing::error;
 
@@ -9,12 +9,14 @@ pub enum UserDomainError {
     InvalidEmail,
     Unauthorized,
     UsernameOrEmailTaken,
-    Authorization(AuthError),
+    Authorization(UserAuthError),
     Database(String),
     Validation(String),
     Internal(String),
     InvalidTransaction,
     TransactionFailed,
+    UnverifiedEmail,
+    UnableToVerifyEmail,
 }
 
 impl fmt::Display for UserDomainError {
@@ -31,14 +33,16 @@ impl fmt::Display for UserDomainError {
             Self::Internal(msg) => write!(f, "{}", msg),
             Self::InvalidTransaction => write!(f, "Invalid transaction"),
             Self::TransactionFailed => write!(f, "Transaction failed"),
+            Self::UnverifiedEmail => write!(f, "Email is not verified"),
+            Self::UnableToVerifyEmail => write!(f, "Unable to verify email address"),
         }
     }
 }
 
 impl std::error::Error for UserDomainError {}
 
-impl From<AuthError> for UserDomainError {
-    fn from(err: AuthError) -> Self {
+impl From<UserAuthError> for UserDomainError {
+    fn from(err: UserAuthError) -> Self {
         Self::Authorization(err)
     }
 }

@@ -1,7 +1,10 @@
 pub mod award_badge;
 pub mod ban_user;
 pub mod change_username;
-pub mod create_account;
 pub mod make_moderator;
 pub mod revoke_badge;
+pub mod sign_in;
+pub mod sign_up;
 pub mod unban_user;
+pub mod verify_email_with_otp;
+pub mod verify_otp;
